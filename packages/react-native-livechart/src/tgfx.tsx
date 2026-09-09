@@ -154,9 +154,18 @@ export function Shader({ source, ...props }: AnyProps) {
 export const Atlas = any(TgfxAtlas);
 
 export const Skia = {
-  Color: (color: string) => color,
-  XYWHRect: (x: number, y: number, width: number, height: number): SkRect => ({ x, y, width, height, w: width, h: height }),
-  RSXform: (scos: number, ssin: number, tx: number, ty: number): SkRSXform => ({ scos, ssin, tx, ty }),
+  Color: (color: string) => {
+    "worklet";
+    return color;
+  },
+  XYWHRect: (x: number, y: number, width: number, height: number): SkRect => {
+    "worklet";
+    return { x, y, width, height, w: width, h: height };
+  },
+  RSXform: (scos: number, ssin: number, tx: number, ty: number): SkRSXform => {
+    "worklet";
+    return { scos, ssin, tx, ty };
+  },
   RuntimeEffect: { Make: (source: string): any => ({ source }) },
   Path: { Make: (): string => "" },
   PathBuilder: { Make: (): any => ({ moveTo() { return this; }, lineTo() { return this; }, cubicTo() { return this; }, close() { return this; }, detach() { return ""; } }) },

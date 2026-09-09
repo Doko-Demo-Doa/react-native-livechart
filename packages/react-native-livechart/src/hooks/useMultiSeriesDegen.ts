@@ -1,6 +1,5 @@
 import { useEffect, useRef } from "react";
 import {
-  useDerivedValue,
   useFrameCallback,
   useSharedValue,
   type DerivedValue,
@@ -14,6 +13,11 @@ import type { ChartPadding } from "../draw/line";
 import { computeShake, spawnBurst, tickParticles } from "../math/degenTick";
 import { detectMomentum } from "../math/momentum";
 import type { DegenShakePayload } from "../types";
+
+type ShakeTransform = [
+  { translateX: SharedValue<number> },
+  { translateY: SharedValue<number> },
+];
 
 /**
  * Multi-series degen: **every** visible series sparks a burst off its own
@@ -30,9 +34,7 @@ export function useMultiSeriesDegen(
 ): {
   pack: SharedValue<Float64Array<ArrayBuffer>>;
   packRevision: SharedValue<number>;
-  shakeTransform: DerivedValue<
-    [{ translateX: number }, { translateY: number }]
-  >;
+  shakeTransform: ShakeTransform;
 } {
   const MAX_SLOTS = 80;
   const pack = useSharedValue(new Float64Array(MAX_SLOTS * DEGEN_STRIDE));
@@ -248,13 +250,13 @@ export function useMultiSeriesDegen(
     },
   );
 
-  const shakeTransform = useDerivedValue(() => {
-    "worklet";
-    return [{ translateX: shakeX.get() }, { translateY: shakeY.get() }] as [
-      { translateX: number },
-      { translateY: number },
-    ];
-  });
+  // TGFX accepts live values inside a transform operation, but not a live
+  // transform *array*. Keep the operation list stable and let its individual
+  // coordinate slots animate on the UI thread.
+  const shakeTransform: ShakeTransform = [
+    { translateX: shakeX },
+    { translateY: shakeY },
+  ];
 
   return { pack, packRevision, shakeTransform };
 }
