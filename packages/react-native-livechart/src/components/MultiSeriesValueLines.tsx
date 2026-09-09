@@ -1,4 +1,4 @@
-import { DashPathEffect, Group, Path } from "@shopify/react-native-skia";
+import { DashPathEffect, Group, Path } from "../tgfx";
 
 import { useDerivedValue } from "react-native-reanimated";
 import type { ChartPadding } from "../draw/line";
@@ -22,7 +22,7 @@ function SeriesValueLineAtIndex({
   const builder = usePathBuilder();
 
   const path = useDerivedValue(() => {
-    const b = builder.value;
+    const b = builder.get();
     const h = engine.canvasHeight.get();
     const s = engine.series.get();
     const displays = engine.displaySeriesValues.get();

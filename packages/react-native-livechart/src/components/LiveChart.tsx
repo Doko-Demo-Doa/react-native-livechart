@@ -35,7 +35,7 @@ import {
   Path,
   Rect,
   vec,
-} from "@shopify/react-native-skia";
+} from "../tgfx";
 
 import {
   DEFAULT_ACCENT_COLOR,

@@ -1,4 +1,4 @@
-import type { SkFont } from "@shopify/react-native-skia";
+import type { SkFont } from "../tgfx";
 import { Gesture } from "react-native-gesture-handler";
 import { useDerivedValue, type SharedValue } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";

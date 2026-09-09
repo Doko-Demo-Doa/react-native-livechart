@@ -6,7 +6,7 @@ import type {
   DataSourceParam,
   SkFontMgr,
   SkImage,
-} from "@shopify/react-native-skia";
+} from "./tgfx";
 
 /** A single data point on the chart timeline. */
 export interface LiveChartPoint {
@@ -44,8 +44,7 @@ export type FontWeight =
 /** Color scheme for the chart background, grid, and derived palette colors. */
 export type ThemeMode = "light" | "dark";
 
-/** Skia canvas composition mode. Android uses TextureView for `"transparent"`
- * and an opaque SurfaceView for `"opaque"`. */
+/** TGFX canvas composition mode. */
 export type CanvasMode = "transparent" | "opaque";
 
 /**
@@ -1356,17 +1355,13 @@ export interface FontConfig {
   /** Font weight. Default `"normal"`. */
   fontWeight?: FontWeight;
   /**
-   * Load this typeface from a Metro asset or URI (`require("./Font.ttf")`, path string, or
-   * `Uint8Array`). When set, Skia uses `useFont` for that file; `fontWeight` does not alter the
-   * outlines (use a bold file or `fontManager` for multiple weights). While the asset loads,
-   * the chart falls back to `matchFont` with `fontFamily` / defaults. Prefer either this or
-   * `fontManager`, not both, unless you intentionally want a registered family as fallback.
+   * @deprecated TGFX registers custom files through the canvas `fonts` prop, which is not yet
+   * exposed by LiveChart. This legacy field is accepted for source compatibility but ignored;
+   * use a platform-registered `fontFamily`.
    */
   typeface?: DataSourceParam;
   /**
-   * Custom Skia font manager from `useFonts` (e.g. bundled `.ttf` files registered under family
-   * names). Passed as the second argument to `matchFont`. When `null` or omitted, the system
-   * font manager is used.
+   * @deprecated A Skia font manager is not supported by the TGFX renderer and is ignored.
    */
   fontManager?: SkFontMgr | null;
 }

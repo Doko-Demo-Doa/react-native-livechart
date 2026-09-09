@@ -82,7 +82,7 @@ globalThis.__customSerializationRegistry.push({
   unpack: () => ({}),
 });
 
-jest.mock("@shopify/react-native-skia", () => {
+jest.mock("react-native-tgfx", () => {
   const React = require("react");
   const { View } = require("react-native");
 
@@ -181,6 +181,7 @@ jest.mock("@shopify/react-native-skia", () => {
     Image: View,
     Atlas: View,
     LinearGradient: View,
+    RadialGradient: View,
     vec: (x, y) => ({ x, y }),
     PaintStyle: { Fill: 0, Stroke: 1 },
     StrokeCap: { Butt: 0, Round: 1, Square: 2 },

@@ -4,7 +4,7 @@
  *
  * @see https://github.com/benjitaylor/liveline
  */
-import { Canvas, Group, Rect } from "@shopify/react-native-skia";
+import { Canvas, Group, Rect } from "../tgfx";
 import {
   forwardRef,
   useImperativeHandle,

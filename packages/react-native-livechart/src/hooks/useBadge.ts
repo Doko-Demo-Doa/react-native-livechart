@@ -1,4 +1,4 @@
-import { type SkFont } from "@shopify/react-native-skia";
+import { type SkFont } from "../tgfx";
 import {
   useDerivedValue,
   useSharedValue,
@@ -74,7 +74,7 @@ export function useBadge(
   const badgeBuilder = usePathBuilder();
 
   const badge = useDerivedValue(() => {
-    const b = badgeBuilder.value;
+    const b = badgeBuilder.get();
     const w = engine.canvasWidth.get();
     const h = engine.canvasHeight.get();
     if (w === 0 || h === 0) {

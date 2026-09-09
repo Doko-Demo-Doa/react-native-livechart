@@ -9,7 +9,7 @@
 [![License: MIT](https://img.shields.io/npm/l/react-native-livechart.svg)](https://github.com/brandtnewlabs/react-native-livechart/blob/main/LICENSE)
 [![Docs](https://img.shields.io/badge/docs-online-3323E6.svg)](https://react-native-livechart.brandtnewlabs.com)
 
-High-performance **live** line and candlestick charts for React Native, built on **[@shopify/react-native-skia](https://shopify.github.io/react-native-skia/)**, **[react-native-reanimated](https://docs.swmansion.com/react-native-reanimated/)**, and **[react-native-gesture-handler](https://docs.swmansion.com/react-native-gesture-handler/)**. Data and live values flow through Reanimated `SharedValue`s, so the UI thread animates without per-frame JS bridge traffic.
+High-performance **live** line and candlestick charts for React Native, built on **[react-native-tgfx](https://www.npmjs.com/package/react-native-tgfx)**, **[react-native-reanimated](https://docs.swmansion.com/react-native-reanimated/)**, and **[react-native-gesture-handler](https://docs.swmansion.com/react-native-gesture-handler/)**. Data and live values flow through Reanimated `SharedValue`s, so the UI thread animates without per-frame JS bridge traffic.
 
 📖 **[Documentation →](https://react-native-livechart.brandtnewlabs.com)**
 
@@ -55,12 +55,13 @@ Install the library's **peer dependencies** in your app (versions should match y
 | ------------------------------ | ----------------------------------- |
 | `react`                        | UI                                  |
 | `react-native`                 | Host                                |
-| `@shopify/react-native-skia`   | Canvas rendering                    |
+| `react-native-tgfx`            | GPU canvas rendering                |
+| `react-native-nitro-modules`   | Required TGFX native runtime        |
 | `react-native-reanimated`      | Shared values, animations, worklets |
 | `react-native-worklets`        | Required by Reanimated 4+           |
 | `react-native-gesture-handler` | Pan / scrub gestures                |
 
-Follow the Skia, Reanimated, and Gesture Handler install docs for your toolchain (Babel plugin, `GestureHandlerRootView`, etc.).
+TGFX requires the New Architecture and a native development build (it does not run in Expo Go or React Native Web). Follow the TGFX, Reanimated, and Gesture Handler install docs for your toolchain (Babel plugin, `GestureHandlerRootView`, etc.).
 
 ### React Native architecture
 
@@ -222,7 +223,7 @@ Screens demonstrate candlestick mode, multi-series, scrub, momentum tuning, dege
 
 ## How it works
 
-- **Skia** draws grid, line, candles, badges, and overlays on the GPU.
+- **TGFX** draws grid, line, candles, badges, and overlays on the GPU.
 - **Reanimated** owns timeline layout, smoothing, and scrub state; hooks feed a small engine API on the UI thread.
 - **Gesture Handler** drives scrubbing and chart interactions.
 
@@ -236,13 +237,13 @@ Contributions are welcome — see [CONTRIBUTING.md](https://github.com/brandtnew
 
 **[liveline](https://github.com/benjitaylor/liveline)** by **Benji Taylor** (MIT) is the **primary inspiration** for this project: live updating charts, line and candlestick modes (including line/candle morph ideas), multi-series behavior, momentum and degen effects, scrubbing, loading and paused states, theme plus accent-driven palettes, and the overall prop vocabulary — even though names differ here (for example `accentColor` vs `color`, `timeWindow` vs `window`, and `SharedValue` streams instead of React state).
 
-This package is a **React Native reimplementation** using **Skia**, **Reanimated**, and **Gesture Handler**. It is **not** the web canvas component ported line-for-line. The codebase **diverged** over time toward more hooks, layout options, and customizability for mobile.
+This package is a **React Native reimplementation** using **TGFX**, **Reanimated**, and **Gesture Handler**. It is **not** the web canvas component ported line-for-line. The codebase **diverged** over time toward more hooks, layout options, and customizability for mobile.
 
 **Third-party / adapted code:** math utilities used for chart geometry and smoothing (including Fritsch–Carlson monotone spline tangents, momentum detection, range/lerp helpers, and related pieces) are **adapted from liveline** under the MIT license. See the [LICENSE](https://github.com/brandtnewlabs/react-native-livechart/blob/main/LICENSE) file for the formal notice.
 
 ### Compared to liveline
 
-- **Rendering:** liveline uses a DOM `<canvas>` and `requestAnimationFrame`; this library uses **Skia** on the UI thread.
+- **Rendering:** liveline uses a DOM `<canvas>` and `requestAnimationFrame`; this library uses **TGFX** on the UI thread.
 - **Data flow:** liveline takes plain `data` / `value` props; here history and live values are **`SharedValue`s** so worklets avoid per-frame JS bridge work.
 - **Input:** scrubbing uses **pan gestures** instead of canvas hover.
 - **Scope:** liveline includes features this repo does not (for example **orderbook** visualization and built-in time-window controls); this repo adds **React Native–specific** pieces (for example trade markers via `tradeStream`) and a more decomposed hook API.

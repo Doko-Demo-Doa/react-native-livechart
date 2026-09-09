@@ -7,7 +7,7 @@ import {
   Text as SkiaText,
   vec,
   type SkFont,
-} from "@shopify/react-native-skia";
+} from "../tgfx";
 import { useRef } from "react";
 import { useDerivedValue, type SharedValue } from "react-native-reanimated";
 import {
@@ -126,7 +126,7 @@ export function LoadingOverlay({
 
   // Squiggly path — animated each frame via timestamp
   const squigglyPath = useDerivedValue(() => {
-    const b = squigglyBuilder.value;
+    const b = squigglyBuilder.get();
     if (!isLoading.get() && !isEmpty.value && morphT.get() >= 1) {
       return b.detach();
     }

@@ -1,4 +1,4 @@
-import { DashPathEffect, Path } from "@shopify/react-native-skia";
+import { DashPathEffect, Path } from "../tgfx";
 import { useDerivedValue, type SharedValue } from "react-native-reanimated";
 
 import type { ChartPadding } from "../draw/line";
@@ -27,7 +27,7 @@ export function ValueLineOverlay({
   const builder = usePathBuilder();
 
   const path = useDerivedValue(() => {
-    const b = builder.value;
+    const b = builder.get();
     const y = dotY.get();
     if (y >= 0) {
       b.moveTo(padding.left, y);

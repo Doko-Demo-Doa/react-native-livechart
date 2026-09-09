@@ -2,7 +2,7 @@ import {
   Group,
   Text as SkiaText,
   type SkFont,
-} from "@shopify/react-native-skia";
+} from "../tgfx";
 import { useDerivedValue, type SharedValue } from "react-native-reanimated";
 
 interface LabelEntry {

@@ -4,7 +4,7 @@ import {
   Path,
   Text as SkiaText,
   type SkFont,
-} from "@shopify/react-native-skia";
+} from "../tgfx";
 import { useDerivedValue } from "react-native-reanimated";
 
 import type { ChartEngineLayout } from "../core/useLiveChartEngine";
@@ -37,7 +37,7 @@ export function SegmentDividerOverlay({
   const dividerBuilder = usePathBuilder();
 
   const dividerPath = useDerivedValue(() => {
-    const b = dividerBuilder.value;
+    const b = dividerBuilder.get();
     const l = layout.value;
     if (l.visible && segment.divider) {
       b.moveTo(l.x1, l.yTop);

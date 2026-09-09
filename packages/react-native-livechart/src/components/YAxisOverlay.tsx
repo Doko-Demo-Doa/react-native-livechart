@@ -3,7 +3,7 @@ import {
   Group,
   Path,
   type SkFont,
-} from "@shopify/react-native-skia";
+} from "../tgfx";
 import { useDerivedValue, type SharedValue } from "react-native-reanimated";
 import { BADGE_METRICS_DEFAULTS, MAX_Y_LABELS } from "../constants";
 import type { ResolvedGridStyleConfig } from "../core/resolveConfig";
@@ -120,7 +120,7 @@ export function YAxisOverlay({
   });
 
   const gridLinesPath = useDerivedValue(() => {
-    const b = gridBuilder.value;
+    const b = gridBuilder.get();
     if (variant === "labels") return b.detach();
     const items = entries.get();
     const w = engine.canvasWidth.get();

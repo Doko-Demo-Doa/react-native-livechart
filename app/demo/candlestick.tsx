@@ -160,6 +160,10 @@ export default function CandlestickScreen() {
       description={`mode="candle" with ${candleWidthSecs}s OHLC buckets plus a historical average-cost reference series. Each candle aggregates many ticks, so it shows a real body + wick. Needs ≥2 committed candles before it draws.`}
       chart={
         <LiveChart
+          // The empty-state demo deliberately swaps its candle SharedValue.
+          // Remounting gives the worklet engine a fresh subscription when the
+          // source switches back to the live stream.
+          key={stripCandles ? "candles-empty" : "candles-live"}
           data={data}
           value={value}
           mode="candle"

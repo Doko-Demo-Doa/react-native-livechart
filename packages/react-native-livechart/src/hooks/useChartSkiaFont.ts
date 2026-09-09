@@ -1,60 +1,62 @@
-import {
-  matchFont,
-  Skia,
-  useFont,
-  type SkFont,
-  type SkFontMgr,
-} from "@shopify/react-native-skia";
-
+import type { SkFont } from "../tgfx";
 import { resolveFontConfig } from "../core/resolveConfig";
 import type { FontConfig } from "../types";
 
-/**
- * System-font match cache. `matchFont` walks the platform font manager to
- * resolve a typeface — a few ms per call — and every chart resolves several
- * fonts per render, so a screen full of sparklines would otherwise re-match
- * the same `{family, size, weight}` dozens of times. `SkFont` instances are
- * immutable and safe to share across canvases. Custom `fontManager`s bypass
- * the cache (their identity isn't part of the key).
- */
-const systemFontCache = new Map<string, SkFont>();
-let systemFontMgr: SkFontMgr | null = null;
+type TgfxFontDescriptor = {
+  fontSize: number;
+  getSize: () => number;
+  measureText: (text: string) => {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+  getMetrics: () => { ascent: number; descent: number; leading: number };
+};
 
-function matchSystemFont(
-  fontFamily: string,
-  fontSize: number,
-  fontWeight: NonNullable<FontConfig["fontWeight"]>,
-): SkFont {
-  const key = `${fontFamily}|${fontSize}|${fontWeight}`;
-  const cached = systemFontCache.get(key);
-  if (cached) return cached;
-  systemFontMgr ??= Skia.FontMgr.System();
-  const font = matchFont({ fontFamily, fontSize, fontWeight }, systemFontMgr);
-  systemFontCache.set(key, font);
-  return font;
+function getSize(this: TgfxFontDescriptor) {
+  "worklet";
+  return this.fontSize;
 }
 
-/**
- * Resolves Skia text for charts: optional bundled `typeface` via `useFont`, otherwise
- * `matchFont` with optional custom `fontManager`. System-font matches are cached
- * module-wide, so many charts sharing a family/size/weight resolve it once.
- */
+function measureText(this: TgfxFontDescriptor, text: string) {
+  "worklet";
+  return {
+    x: 0,
+    y: -this.fontSize * 0.8,
+    width: text.length * this.fontSize * 0.6,
+    height: this.fontSize,
+  };
+}
+
+function getMetrics(this: TgfxFontDescriptor) {
+  "worklet";
+  return {
+    ascent: -this.fontSize * 0.8,
+    descent: this.fontSize * 0.2,
+    leading: 0,
+  };
+}
+
+/** Resolves a native TGFX text descriptor. Font matching and shaping are native. */
 export function useChartSkiaFont(
   fontProp: FontConfig | undefined,
   defaultFamily: string,
   defaultSize: number,
 ): SkFont {
-  const resolved = resolveFontConfig(fontProp, defaultFamily, defaultSize);
-  const { fontFamily, fontSize, fontWeight } = resolved;
-  const typefaceSource = fontProp?.typeface ?? null;
-  const customFont = useFont(typefaceSource, fontSize);
-
-  const fallbackFont = fontProp?.fontManager
-    ? matchFont({ fontFamily, fontSize, fontWeight }, fontProp.fontManager)
-    : matchSystemFont(fontFamily, fontSize, fontWeight);
-
-  if (typefaceSource != null) {
-    return customFont ?? fallbackFont;
-  }
-  return fallbackFont;
+  const { fontFamily, fontSize, fontWeight } = resolveFontConfig(
+    fontProp,
+    defaultFamily,
+    defaultSize,
+  );
+  return {
+    fontFamily,
+    fontSize,
+    fontWeight,
+    // The chart's layout math remains worklet-side. These mirror the small
+    // SkFont query surface while TGFX owns actual text shaping at draw time.
+    getSize,
+    measureText,
+    getMetrics,
+  };
 }

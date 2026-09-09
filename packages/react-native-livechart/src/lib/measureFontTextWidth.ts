@@ -1,4 +1,4 @@
-import type { SkFont } from "@shopify/react-native-skia";
+import type { SkFont } from "../tgfx";
 
 /**
  * Horizontal layout width for `text` via Skia `measureText` (replaces deprecated `getTextWidth`).
@@ -6,5 +6,6 @@ import type { SkFont } from "@shopify/react-native-skia";
  */
 export function measureFontTextWidth(font: SkFont, text: string): number {
   "worklet";
-  return font.measureText(text).width;
+  if (typeof font.measureText === "function") return font.measureText(text).width;
+  return text.length * (font.fontSize ?? font.getSize?.() ?? 12) * 0.6;
 }

@@ -1,5 +1,4 @@
 import { PlusJakartaSans_500Medium } from "@expo-google-fonts/plus-jakarta-sans";
-import { useFont, type SkFont } from "@shopify/react-native-skia";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -30,9 +29,6 @@ import Animated, {
   withTiming,
   type SharedValue,
 } from "react-native-reanimated";
-import { runOnJS } from "react-native-worklets";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-
 import {
   APP_FONT_FAMILY,
   APP_FONT_FAMILY_MEDIUM,
@@ -55,6 +51,10 @@ import {
   usePhantomMarketSimulation,
   type PhantomTimeframe,
 } from "../../sim/usePhantomMarketSimulation";
+import { runOnJS } from "react-native-worklets";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+type SkFont = any;
 
 const C = {
   background: "#000000",
@@ -522,10 +522,10 @@ export default function PhantomUpDownShowcase(): ReactElement {
 
   const outcomeColor = outcomeSide === "up" ? C.green : C.red;
   const roundTargetLabel = PRICE_FORMAT.format(roundTargetNumber);
-  const targetLabelFont = useFont(
-    PlusJakartaSans_500Medium,
-    PHANTOM_CHART_FONT.fontSize,
-  );
+  const targetLabelFont = {
+    fontFamily: PHANTOM_CHART_FONT.fontFamily,
+    fontSize: PHANTOM_CHART_FONT.fontSize,
+  };
   const renderTargetOverlay = (context: ChartOverlayContext) =>
     targetLabelFont ? (
       <RoundTargetOverlay

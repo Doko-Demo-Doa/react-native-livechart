@@ -4,7 +4,7 @@ import {
   RoundedRect,
   Text as SkiaText,
   type SkFont,
-} from "@shopify/react-native-skia";
+} from "../tgfx";
 import {
   useDerivedValue,
   type DerivedValue,

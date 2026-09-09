@@ -1,4 +1,4 @@
-import { Skia, type SkPath } from "@shopify/react-native-skia";
+import type { SkPath } from "../tgfx";
 import { useRef } from "react";
 import { useDerivedValue, type SharedValue } from "react-native-reanimated";
 import { MAX_MULTI_SERIES } from "../constants";
@@ -42,7 +42,7 @@ export function useMultiSeriesLinePaths(
   } | null>(null);
   if (poolRef.current === null) {
     poolRef.current = {
-      empty: Skia.Path.Make(),
+      empty: "",
       ptsBuf: [] as number[],
       simplifiedPts: [] as number[],
       pathsA: [] as SkPath[],
@@ -55,7 +55,7 @@ export function useMultiSeriesLinePaths(
 
   return useDerivedValue(() => {
     const pool = poolRef.current!;
-    const slots = builders.value;
+    const slots = builders.get();
     const s = engine.series.get();
     const displays = engine.displaySeriesValues.get();
     pool.pathsTick = !pool.pathsTick;

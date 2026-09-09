@@ -1,4 +1,4 @@
-import { Skia } from "@shopify/react-native-skia";
+import { Skia } from "../tgfx";
 import { useEffect } from "react";
 import {
   useDerivedValue,
@@ -117,7 +117,7 @@ export function useCandlePaths(
 
   /* istanbul ignore next -- worklet */
   const upBodiesPath = useDerivedValue(() => {
-    const b = upBodiesBuilder.value;
+    const b = upBodiesBuilder.get();
     const { bodies } = geometry.value;
     const radius = candleMetrics.bodyRadius;
     for (let i = 0; i < bodies.length; i++) {
@@ -140,7 +140,7 @@ export function useCandlePaths(
 
   /* istanbul ignore next -- worklet */
   const downBodiesPath = useDerivedValue(() => {
-    const b = downBodiesBuilder.value;
+    const b = downBodiesBuilder.get();
     const { bodies } = geometry.value;
     const radius = candleMetrics.bodyRadius;
     for (let i = 0; i < bodies.length; i++) {
@@ -163,7 +163,7 @@ export function useCandlePaths(
 
   /* istanbul ignore next -- worklet */
   const upWicksPath = useDerivedValue(() => {
-    const b = upWicksBuilder.value;
+    const b = upWicksBuilder.get();
     const { wicks } = geometry.value;
     for (let i = 0; i < wicks.length; i++) {
       if (wicks[i].up) {
@@ -176,7 +176,7 @@ export function useCandlePaths(
 
   /* istanbul ignore next -- worklet */
   const downWicksPath = useDerivedValue(() => {
-    const b = downWicksBuilder.value;
+    const b = downWicksBuilder.get();
     const { wicks } = geometry.value;
     for (let i = 0; i < wicks.length; i++) {
       if (!wicks[i].up) {
@@ -208,7 +208,7 @@ export function useCandlePaths(
 
   /* istanbul ignore next -- worklet */
   const upBarsPath = useDerivedValue(() => {
-    const b = upBarsBuilder.value;
+    const b = upBarsBuilder.get();
     const { bars } = volumeGeometry.value;
     for (let i = 0; i < bars.length; i++) {
       if (bars[i].up) {
@@ -231,7 +231,7 @@ export function useCandlePaths(
 
   /* istanbul ignore next -- worklet */
   const downBarsPath = useDerivedValue(() => {
-    const b = downBarsBuilder.value;
+    const b = downBarsBuilder.get();
     const { bars } = volumeGeometry.value;
     for (let i = 0; i < bars.length; i++) {
       if (!bars[i].up) {

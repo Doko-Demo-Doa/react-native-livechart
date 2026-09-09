@@ -1,4 +1,4 @@
-import { DashPathEffect, Path } from "@shopify/react-native-skia";
+import { DashPathEffect, Path } from "../tgfx";
 import { useDerivedValue, type SharedValue } from "react-native-reanimated";
 
 import type {
@@ -68,7 +68,7 @@ function ConnectorLine({
   const { line, fontSize } = config;
 
   const path = useDerivedValue(() => {
-    const b = builder.value;
+    const b = builder.get();
     const value = valueSV.get();
     const time = timeSV.get();
     const cw = engine.canvasWidth.get();

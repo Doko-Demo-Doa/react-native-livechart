@@ -1,71 +1,24 @@
-import { matchFont, useFont, type SkFont } from "@shopify/react-native-skia";
 import { renderHook } from "@testing-library/react-native";
-
 import { useChartSkiaFont } from "../../src/hooks/useChartSkiaFont";
 
-/** Repo-root font; jest-expo’s asset transformer maps any `.ttf` to module id `1`. */
-const googleSansCodeRegular = require("../../../../assets/fonts/GoogleSansCode-Regular.ttf");
-
 describe("useChartSkiaFont", () => {
-  const mockUseFont = jest.mocked(useFont);
-  const mockMatchFont = jest.mocked(matchFont);
-
-  beforeEach(() => {
-    mockUseFont.mockClear();
-    mockMatchFont.mockClear();
-  });
-
-  it("passes Metro require() module id and resolved fontSize to useFont", async () => {
-    const fontFromAsset = { tag: "from-useFont" } as unknown as SkFont;
-    mockUseFont.mockReturnValue(fontFromAsset);
-
-    /** Simulates `require('./Font.ttf')` — a numeric asset module id in RN / Metro. */
-    const metroModuleId = 91011;
-
+  it("returns the resolved TGFX family, size, and weight descriptor", async () => {
     const { result } = await renderHook(() =>
-      useChartSkiaFont({ typeface: metroModuleId, fontSize: 13 }, "Menlo", 11),
+      useChartSkiaFont({ fontSize: 13, fontWeight: "700" }, "Menlo", 11),
     );
 
-    expect(mockUseFont).toHaveBeenCalledWith(metroModuleId, 13);
-    expect(result.current).toBe(fontFromAsset);
+    expect(result.current).toMatchObject({
+      fontFamily: "Menlo",
+      fontSize: 13,
+      fontWeight: "700",
+    });
   });
 
-  it("forwards require(assets/fonts/GoogleSansCode-Regular.ttf) to useFont", async () => {
-    const fontFromAsset = { tag: "googleSansCode" } as unknown as SkFont;
-    mockUseFont.mockReturnValue(fontFromAsset);
-
+  it("uses the component defaults when the font prop is omitted", async () => {
     const { result } = await renderHook(() =>
-      useChartSkiaFont(
-        { typeface: googleSansCodeRegular, fontSize: 14 },
-        "Menlo",
-        11,
-      ),
+      useChartSkiaFont(undefined, "Courier", 11),
     );
 
-    expect(mockUseFont).toHaveBeenCalledWith(googleSansCodeRegular, 14);
-    expect(result.current).toBe(fontFromAsset);
-  });
-
-  it("calls useFont with null when typeface is omitted", async () => {
-    mockUseFont.mockReturnValue({} as SkFont);
-
-    await renderHook(() => useChartSkiaFont({ fontSize: 12 }, "Courier", 11));
-
-    expect(mockUseFont).toHaveBeenCalledWith(null, 12);
-  });
-
-  it("falls back to matchFont when typeface is set but useFont is still null", async () => {
-    const fallback = { tag: "fallback" } as unknown as SkFont;
-    mockUseFont.mockReturnValue(null as unknown as SkFont);
-    mockMatchFont.mockReturnValue(fallback);
-
-    const metroModuleId = 42;
-    const { result } = await renderHook(() =>
-      useChartSkiaFont({ typeface: metroModuleId }, "Menlo", 11),
-    );
-
-    expect(mockUseFont).toHaveBeenCalledWith(metroModuleId, 11);
-    expect(mockMatchFont).toHaveBeenCalled();
-    expect(result.current).toBe(fallback);
+    expect(result.current).toMatchObject({ fontFamily: "Courier", fontSize: 11 });
   });
 });

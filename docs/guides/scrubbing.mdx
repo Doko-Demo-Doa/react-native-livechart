@@ -356,12 +356,12 @@ Turn it off, or tweak its look, with the `boolean | SelectionDotConfig` `selecti
 <LiveChart data={data} value={value} selectionDot={{ ring: false }} />
 ```
 
-For full control, pass a `component` — a Skia dot that receives the scrub position as
+For full control, pass a `component` — a TGFX dot that receives the scrub position as
 `SharedValue`s (`SelectionDotProps`), so it animates on the UI thread without re-renders. When set,
 the `size` / `color` / `ring` knobs are ignored.
 
 ```tsx
-import { Circle, Group } from "@shopify/react-native-skia";
+import { Circle, Group } from "react-native-tgfx";
 import type { SelectionDotProps } from "react-native-livechart";
 
 function RingDot({ x, y, opacity, color, size }: SelectionDotProps) {

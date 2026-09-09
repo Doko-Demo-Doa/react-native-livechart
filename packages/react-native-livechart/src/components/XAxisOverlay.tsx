@@ -1,4 +1,4 @@
-import { Group, Path, type SkFont } from "@shopify/react-native-skia";
+import { Group, Path, type SkFont } from "../tgfx";
 import { useDerivedValue, type SharedValue } from "react-native-reanimated";
 import { X_AXIS_LABEL_OFFSET_Y } from "../constants";
 import type { ChartEngineLayout } from "../core/useLiveChartEngine";
@@ -37,7 +37,7 @@ export function XAxisOverlay({
 
   const axisPath = useDerivedValue(() => {
     "worklet";
-    const b = axisBuilder.value;
+    const b = axisBuilder.get();
     const w = engine.canvasWidth.get();
     const h = engine.canvasHeight.get();
     const lineY = h - padding.bottom + volumeBandHeight;

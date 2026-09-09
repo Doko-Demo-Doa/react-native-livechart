@@ -1,5 +1,5 @@
-import { Blur, Group, Path, Skia } from "@shopify/react-native-skia";
-import { DashPathEffect } from "@shopify/react-native-skia";
+import { Blur, Group, Path, type SkPath } from "../tgfx";
+import { DashPathEffect } from "../tgfx";
 import { useDerivedValue, type SharedValue } from "react-native-reanimated";
 import type { SeriesLineStyle } from "../core/multiSeriesLayout";
 import { SERIES_COLORS } from "../theme";
@@ -14,7 +14,7 @@ export function MultiSeriesStroke({
   lineStyle,
 }: {
   index: number;
-  paths: SharedValue<ReturnType<typeof Skia.Path.Make>[]>;
+  paths: SharedValue<SkPath[]>;
   opacities: SharedValue<number[]>;
   series: SharedValue<SeriesConfig[]>;
   strokeWidth: number;
@@ -23,7 +23,7 @@ export function MultiSeriesStroke({
 }) {
   const path = useDerivedValue(
     /* istanbul ignore next -- Skia path derived on UI thread */
-    () => paths.value[index] ?? Skia.Path.Make(),
+    () => paths.value[index] ?? "",
   );
   const opacity = useDerivedValue(
     /* istanbul ignore next -- Reanimated derived on UI thread */

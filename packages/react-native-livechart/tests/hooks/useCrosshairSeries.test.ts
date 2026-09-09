@@ -1,4 +1,4 @@
-import { type SkFont } from "@shopify/react-native-skia";
+import { type SkFont } from "../../src/tgfx";
 import { renderHook } from "@testing-library/react-native";
 import { Platform } from "react-native";
 import { MAX_MULTI_SERIES } from "../../src/constants";

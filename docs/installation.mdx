@@ -19,17 +19,18 @@ Expo SDK.
 | ------------------------------ | ----------------------------------- |
 | `react`                        | UI                                  |
 | `react-native`                 | Host                                |
-| `@shopify/react-native-skia`   | Canvas rendering                    |
+| `react-native-tgfx`            | GPU canvas rendering                |
+| `react-native-nitro-modules`   | Required TGFX native runtime        |
 | `react-native-reanimated`      | Shared values, animations, worklets |
 | `react-native-worklets`        | Required by Reanimated 4+           |
 | `react-native-gesture-handler` | Pan / scrub gestures                |
 
-Follow the install docs for [Skia](https://shopify.github.io/react-native-skia/docs/getting-started/installation),
+TGFX requires the New Architecture and a native development build; it cannot run in Expo Go or on React Native Web. Follow the install docs for [TGFX](https://tgfx.riteshshukla.in/api),
 [Reanimated](https://docs.swmansion.com/react-native-reanimated/docs/fundamentals/getting-started),
 and [Gesture Handler](https://docs.swmansion.com/react-native-gesture-handler/docs/fundamentals/installation)
 for your toolchain.
 
-## Babel
+## Native build and Babel
 
 The package ships **TypeScript source**, so your app's bundler compiles it with the same stack
 as a typical Expo / Reanimated 4 project. You need:
@@ -145,7 +146,7 @@ export default function App() {
 
 react-native-livechart targets **iOS and Android** via React Native (bare workflow or Expo).
 
-**React Native Web is not supported.** The chart relies on `@shopify/react-native-skia` and
+**React Native Web is not supported.** The chart relies on `react-native-tgfx` and
 Reanimated worklets running on the native UI thread; the same code path doesn't run under
 `react-native-web`. If you ship to web, render a different chart (or a static fallback) when
 `Platform.OS === "web"`.

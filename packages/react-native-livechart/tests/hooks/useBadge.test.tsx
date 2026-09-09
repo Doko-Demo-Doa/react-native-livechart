@@ -1,7 +1,7 @@
 import { BADGE_DOT_GAP, BADGE_PILL_PAD_X } from "../../src/constants";
 import { DEFAULT_PADDING, badgeTailAndCap, pillTextLeftX } from "../../src/draw/line";
 
-import type { SkFont } from "@shopify/react-native-skia";
+import type { SkFont } from "../../src/tgfx";
 import { renderHook } from "@testing-library/react-native";
 import { useSharedValue } from "react-native-reanimated";
 import { measureFontTextWidth } from "../../src/lib/measureFontTextWidth";

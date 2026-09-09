@@ -2,7 +2,7 @@ import {
   Group,
   Text as SkiaText,
   type SkFont,
-} from "@shopify/react-native-skia";
+} from "../tgfx";
 import { useDerivedValue } from "react-native-reanimated";
 
 import type { ChartPadding } from "../draw/line";

@@ -4,7 +4,7 @@ import {
   type SkColor,
   type SkRSXform,
   type SkRect,
-} from "@shopify/react-native-skia";
+} from "../tgfx";
 import { useRef } from "react";
 import { useDerivedValue, type SharedValue } from "react-native-reanimated";
 import {
@@ -147,6 +147,11 @@ export function DegenParticlesOverlay({
   const transforms = useDerivedValue(() => atlasData.get().transforms, [atlasData]);
   const sprites = useDerivedValue(() => atlasData.get().sprites, [atlasData]);
   const atlasColors = useDerivedValue(() => atlasData.get().colors, [atlasData]);
+
+  // TGFX's alpha API does not yet expose a compatible offscreen picture/image
+  // recorder for the procedural white sprite. Do not pass a null image to the
+  // native Atlas while that bridge is unavailable.
+  if (!sprite.image) return null;
 
   return (
     <Atlas

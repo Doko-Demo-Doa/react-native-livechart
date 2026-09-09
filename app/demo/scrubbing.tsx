@@ -1,6 +1,6 @@
 import { StyleSheet, Text, TextInput, View } from "react-native";
 
-import { Circle, Group } from "@shopify/react-native-skia";
+import { Circle, Group } from "react-native-tgfx";
 import { useEffect, useState } from "react";
 import {
   formatTime,

@@ -1,4 +1,4 @@
-import { BlurMask, Circle, Group } from "@shopify/react-native-skia";
+import { BlurMask, Circle, Group } from "../tgfx";
 
 import { useDerivedValue, type SharedValue } from "react-native-reanimated";
 import type { ChartPadding } from "../draw/line";

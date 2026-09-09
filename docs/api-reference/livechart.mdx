@@ -589,7 +589,8 @@ paused. See [Time-scroll → Reset zoom from a button](/guides/time-scroll#reset
 </ParamField>
 
 <ParamField body="font" type="FontConfig">
-  Font family / size / weight / custom typeface for all chart text.
+  Font family / size / weight for all chart text. Use a platform-registered family;
+  legacy custom-typeface fields are ignored by the TGFX renderer.
 </ParamField>
 
 <ParamField body="leftEdgeFade" type="boolean | LeftEdgeFadeConfig" default="true">

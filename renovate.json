@@ -15,7 +15,7 @@
   },
   "packageRules": [
     {
-      "description": "Library peer dependencies (RN, Skia, Reanimated, Worklets, Gesture Handler) are the consumer's choice — never bump them here.",
+      "description": "Library peer dependencies (RN, TGFX, Nitro Modules, Reanimated, Worklets, Gesture Handler) are the consumer's choice — never bump them here.",
       "matchDepTypes": ["peerDependencies"],
       "enabled": false
     },
@@ -63,7 +63,8 @@
         "react-native-gesture-handler",
         "react-native-screens",
         "react-native-safe-area-context",
-        "@shopify/react-native-skia"
+        "react-native-tgfx",
+        "react-native-nitro-modules"
       ],
       "enabled": false
     }

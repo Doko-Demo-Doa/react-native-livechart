@@ -5,7 +5,7 @@ import {
   RoundedRect,
   Text as SkiaText,
   type SkFont,
-} from "@shopify/react-native-skia";
+} from "../tgfx";
 import { useDerivedValue, type SharedValue } from "react-native-reanimated";
 
 import type { ResolvedThresholdLineConfig } from "../core/resolveConfig";
@@ -77,7 +77,7 @@ export function ThresholdLineOverlay({
   const builder = usePathBuilder();
 
   const linePath = useDerivedValue(() => {
-    const b = builder.value;
+    const b = builder.get();
     if (visible.get()) {
       const sp = seriesPts?.get();
       if (sp && sp.length >= 4) {

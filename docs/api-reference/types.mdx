@@ -642,10 +642,16 @@ interface FontConfig {
   fontFamily?: string;      // default "Menlo"
   fontSize?: number;        // default 11
   fontWeight?: FontWeight;
-  typeface?: DataSourceParam; // require(...) / path / Uint8Array
+  /** @deprecated Ignored by the TGFX renderer. */
+  typeface?: DataSourceParam;
+  /** @deprecated Ignored by the TGFX renderer. */
   fontManager?: SkFontMgr | null;
 }
 ```
+
+TGFX uses native font-family resolution. Use a platform-registered `fontFamily`;
+the legacy `typeface` and `fontManager` fields are retained only for source
+compatibility and are ignored.
 
 ## Imperative handle
 

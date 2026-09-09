@@ -1,6 +1,6 @@
 import { JetBrainsMono_400Regular } from "@expo-google-fonts/jetbrains-mono";
 import { Ionicons } from "@expo/vector-icons";
-import { Canvas, Path, Skia } from "@shopify/react-native-skia";
+import { Canvas, Path } from "react-native-tgfx";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef, useState, type RefObject } from "react";
@@ -246,12 +246,7 @@ function makeTriangle(
   dx: number,
   dy: number,
 ) {
-  const builder = Skia.PathBuilder.Make();
-  builder.moveTo(ax, ay);
-  builder.lineTo(bx, by);
-  builder.lineTo(dx, dy);
-  builder.close();
-  return builder.build();
+  return `M${ax} ${ay} L${bx} ${by} L${dx} ${dy} Z`;
 }
 
 function makeEthPaths(size: number) {

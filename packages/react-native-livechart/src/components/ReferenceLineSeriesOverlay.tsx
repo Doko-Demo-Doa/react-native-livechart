@@ -4,7 +4,7 @@ import {
   Path,
   Text as SkiaText,
   type SkFont,
-} from "@shopify/react-native-skia";
+} from "../tgfx";
 import { useDerivedValue } from "react-native-reanimated";
 
 import type { ChartEngineLayout } from "../core/useLiveChartEngine";
@@ -54,7 +54,7 @@ export function ReferenceLineSeriesOverlay({
 
   const builder = usePathBuilder();
   const path = useDerivedValue(() => {
-    const b = builder.value;
+    const b = builder.get();
     const screen = geometry.screenPts.get();
     if (geometry.visible.get() && screen.length >= 4) {
       b.moveTo(screen[0], screen[1]);

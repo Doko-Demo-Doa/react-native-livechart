@@ -1,6 +1,6 @@
 import { useDerivedValue, type SharedValue } from "react-native-reanimated";
 
-import type { SkFont } from "@shopify/react-native-skia";
+import type { SkFont } from "../tgfx";
 import type { ChartEngineLayout } from "../core/useLiveChartEngine";
 import {
   rightAnchoredYAxisColumnLayout,

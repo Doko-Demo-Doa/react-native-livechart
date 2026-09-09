@@ -74,7 +74,9 @@ describe("buildMarkerAtlas", () => {
     const atlas = buildMarkerAtlas(markers, palette, font);
     // 3 distinct appearances: green +, red −, winner.
     expect(Object.keys(atlas.cells)).toHaveLength(3);
-    expect(atlas.image).not.toBeNull();
+    // TGFX has no picture-recorder bridge: cells remain available for layout,
+    // while marker drawing is performed by the renderer rather than a Skia image.
+    expect(atlas.image).toBeNull();
     // Cells are keyed by appearance signature, not by marker id/order.
     expect(atlas.cells[markerAppearanceSig(markers[0])]).toBeDefined();
     expect(atlas.cells[markerAppearanceSig(markers[0])]).toBe(

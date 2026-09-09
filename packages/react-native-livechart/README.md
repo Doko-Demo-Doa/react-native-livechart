@@ -9,7 +9,7 @@
 [![License: MIT](https://img.shields.io/npm/l/react-native-livechart.svg)](https://github.com/brandtnewlabs/react-native-livechart/blob/main/LICENSE)
 [![Docs](https://img.shields.io/badge/docs-online-3323E6.svg)](https://react-native-livechart.brandtnewlabs.com)
 
-High-performance **live** line and candlestick charts for React Native, built on **[@shopify/react-native-skia](https://shopify.github.io/react-native-skia/)**, **[react-native-reanimated](https://docs.swmansion.com/react-native-reanimated/)**, and **[react-native-gesture-handler](https://docs.swmansion.com/react-native-gesture-handler/)**. Data and live values flow through Reanimated `SharedValue`s, so the UI thread animates without per-frame JS bridge traffic.
+High-performance **live** line and candlestick charts for React Native, built on **[react-native-tgfx](https://www.npmjs.com/package/react-native-tgfx)**, **[react-native-reanimated](https://docs.swmansion.com/react-native-reanimated/)**, and **[react-native-gesture-handler](https://docs.swmansion.com/react-native-gesture-handler/)**. Data and live values flow through Reanimated `SharedValue`s, so the UI thread animates without per-frame JS bridge traffic.
 
 📖 **[Documentation →](https://react-native-livechart.brandtnewlabs.com)**
 
@@ -55,12 +55,15 @@ Install the library's **peer dependencies** in your app (versions should match y
 | ------------------------------ | ----------------------------------- |
 | `react`                        | UI                                  |
 | `react-native`                 | Host                                |
-| `@shopify/react-native-skia`   | Canvas rendering                    |
+| `react-native-tgfx`            | GPU canvas rendering                |
+| `react-native-nitro-modules`   | Required TGFX native runtime        |
 | `react-native-reanimated`      | Shared values, animations, worklets |
 | `react-native-worklets`        | Required by Reanimated 4+           |
 | `react-native-gesture-handler` | Pan / scrub gestures                |
 
-Follow the Skia, Reanimated, and Gesture Handler install docs for your toolchain (Babel plugin, `GestureHandlerRootView`, etc.).
+TGFX requires the New Architecture and a native development build; it does not
+run in Expo Go or React Native Web. Follow the TGFX, Reanimated, and Gesture
+Handler install docs for your toolchain (Babel plugin, `GestureHandlerRootView`, etc.).
 
 ### React Native architecture
 

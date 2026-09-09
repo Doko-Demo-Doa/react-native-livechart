@@ -3,7 +3,7 @@
   "bugs": {
     "url": "https://github.com/brandtnewlabs/react-native-livechart/issues"
   },
-  "description": "High-performance live line and candlestick charts for React Native, built on Skia and Reanimated. Inspired by liveline (Benji Taylor).",
+  "description": "High-performance live line and candlestick charts for React Native, built on TGFX and Reanimated. Inspired by liveline (Benji Taylor).",
   "devDependencies": {
     "@types/react": "~19.2.14",
     "react-native-worklets": "0.10.0",
@@ -27,7 +27,7 @@
   "keywords": [
     "react-native",
     "chart",
-    "skia",
+    "tgfx",
     "reanimated",
     "live",
     "trading",
@@ -38,11 +38,12 @@
   "module": "./src/index.ts",
   "name": "react-native-livechart",
   "peerDependencies": {
-    "@shopify/react-native-skia": ">=2.6.0",
     "react": ">=18.0.0",
     "react-native": ">=0.76.0",
     "react-native-gesture-handler": ">=2.0.0",
+    "react-native-nitro-modules": ">=0.36.5",
     "react-native-reanimated": ">=4.0.0",
+    "react-native-tgfx": "0.0.2-alpha.10",
     "react-native-worklets": ">=0.7.0"
   },
   "private": false,

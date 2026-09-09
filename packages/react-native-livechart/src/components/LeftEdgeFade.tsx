@@ -1,4 +1,4 @@
-import { Group, LinearGradient, Rect, vec } from "@shopify/react-native-skia";
+import { Group, LinearGradient, Rect, vec } from "../tgfx";
 
 import { useDerivedValue } from "react-native-reanimated";
 import type { ChartEngineLayout } from "../core/useLiveChartEngine";

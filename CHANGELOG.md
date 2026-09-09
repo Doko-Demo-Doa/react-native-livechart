@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING:** the rendering backend is now `react-native-tgfx`
+`0.0.2-alpha.10`, replacing `@shopify/react-native-skia`. Applications must
+install `react-native-tgfx` and `react-native-nitro-modules` `>=0.36.5`, use
+the New Architecture, and run a native development build (TGFX is unavailable
+in Expo Go and on React Native Web).
+- **Known alpha limitation:** TGFX does not yet expose the offscreen
+  picture-to-image bridge used by the previous sprite atlases. Built-in stamped
+  markers and degen particle bursts are therefore withheld; connector markers
+  and custom React Native markers continue to render.
+
 ## [4.21.0] - 2026-08-26
 
 ### Added

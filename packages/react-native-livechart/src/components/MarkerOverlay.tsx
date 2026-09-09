@@ -6,7 +6,7 @@ import {
   type SkFont,
   type SkRect,
   type SkRSXform,
-} from "@shopify/react-native-skia";
+} from "../tgfx";
 import { useMemo, useRef, useState } from "react";
 import { PixelRatio } from "react-native";
 import {
@@ -167,7 +167,7 @@ function ConnectorGlyph({
   const glyphBuilder = usePathBuilder();
 
   const glyphPath = useDerivedValue(() => {
-    const b = glyphBuilder.value;
+    const b = glyphBuilder.get();
     const l = layout.get();
     if (l.visible) {
       const x = l.x;

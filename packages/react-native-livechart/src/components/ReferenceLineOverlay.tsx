@@ -5,7 +5,7 @@ import {
   RoundedRect,
   Text as SkiaText,
   type SkFont,
-} from "@shopify/react-native-skia";
+} from "../tgfx";
 import { useDerivedValue, type SharedValue } from "react-native-reanimated";
 
 import type { ChartEngineLayout } from "../core/useLiveChartEngine";
@@ -273,7 +273,7 @@ function ReferenceLineBasePass({
   const borderBuilder = usePathBuilder();
 
   const linePath = useDerivedValue(() => {
-    const b = lineBuilder.value;
+    const b = lineBuilder.get();
     const l = layout.get();
     if (l.visible && l.drawLine && !isBand) {
       b.moveTo(l.lineX1, l.y);
@@ -282,7 +282,7 @@ function ReferenceLineBasePass({
     return b.detach();
   });
   const bandPath = useDerivedValue(() => {
-    const b = bandBuilder.value;
+    const b = bandBuilder.get();
     const l = layout.get();
     if (l.visible && isBand) {
       b.moveTo(l.lineX1, l.y);
@@ -294,7 +294,7 @@ function ReferenceLineBasePass({
     return b.detach();
   });
   const bandBorderPath = useDerivedValue(() => {
-    const b = borderBuilder.value;
+    const b = borderBuilder.get();
     const l = layout.get();
     if (l.visible && hasBandBorder) {
       if (isTimeBand) {
@@ -404,7 +404,7 @@ function ReferenceLineBadgePass({
       ? [{ translateX: badgeOffsetX }, { translateY: badgeOffsetY }]
       : undefined;
   const connPath = useDerivedValue(() => {
-    const b = connBuilder.value;
+    const b = connBuilder.get();
     const l = layout.get();
     if (l.visible && l.badge && l.connStart >= 0) {
       let start = l.connStart;
@@ -431,7 +431,7 @@ function ReferenceLineBadgePass({
     return b.detach();
   });
   const chevronPath = useDerivedValue(() => {
-    const b = chevBuilder.value;
+    const b = chevBuilder.get();
     const l = layout.get();
     if (l.visible && l.offAxis && l.chevronCx >= 0) {
       const cx = l.chevronCx;

@@ -1,4 +1,4 @@
-import { type SkFont } from "@shopify/react-native-skia";
+import { type SkFont } from "../../src/tgfx";
 
 import {
   computeActionBadgeLayout,

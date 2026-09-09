@@ -1,4 +1,4 @@
-import { Skia, type SkPath } from "@shopify/react-native-skia";
+import type { SkPath } from "../tgfx";
 import { useRef } from "react";
 import { useDerivedValue, type SharedValue } from "react-native-reanimated";
 import type {
@@ -86,7 +86,7 @@ export function useChartPaths(
   } | null>(null);
   if (cacheRef.current === null) {
     cacheRef.current = {
-      emptyPath: Skia.Path.Make(),
+      emptyPath: "",
       ptsA: [] as number[],
       ptsB: [] as number[],
       rawPts: [] as number[],
@@ -205,7 +205,7 @@ export function useChartPaths(
     const pts = flatPts.get();
     const n = pts.length >> 1;
     if (n < 2) return cache.emptyPath;
-    const b = lineBuilder.value;
+    const b = lineBuilder.get();
     const ranges = segmentRanges.get();
     if (ranges.length === 0) return cache.emptyPath;
     for (let i = 0; i < ranges.length; i += 2) {
@@ -222,7 +222,7 @@ export function useChartPaths(
     const pts = flatPts.get();
     const n = pts.length >> 1;
     if (n < 2) return cache.emptyPath;
-    const b = fillBuilder.value;
+    const b = fillBuilder.get();
     const ranges = segmentRanges.get();
     if (ranges.length === 0) return cache.emptyPath;
     const bottom = engine.canvasHeight.get() - padding.bottom;
@@ -257,7 +257,7 @@ export function useChartPaths(
 
     const tsamples = thresholdSamples?.get();
     if (tsamples && tsamples.length >= 2) {
-      const b = thresholdFillBuilder.value;
+      const b = thresholdFillBuilder.get();
       // Band bottom = the SAMPLED threshold (identical to what the split shader
       // reads), pinned to the LINE's x-range. Because the geometry and the shader
       // use the same evenly-spaced, linearly-interpolated samples, a step riser
@@ -297,7 +297,7 @@ export function useChartPaths(
     if (!thresholdY) return cache.emptyPath;
     const yT = thresholdY.get();
     if (!Number.isFinite(yT)) return cache.emptyPath;
-    const b = thresholdFillBuilder.value;
+    const b = thresholdFillBuilder.get();
     for (let i = 0; i < ranges.length; i += 2) {
       const start = ranges[i];
       const end = ranges[i + 1];
