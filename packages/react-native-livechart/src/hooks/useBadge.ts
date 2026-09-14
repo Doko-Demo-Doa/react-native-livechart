@@ -18,6 +18,7 @@ import {
 } from "../draw/line";
 import { hexToRgb, lerpColor } from "../math/color";
 import { lerp } from "../math/lerp";
+import { parseColorRgba } from "../theme";
 import type {
   BadgeMetrics,
   BadgeVariant,
@@ -64,10 +65,18 @@ export function useBadge(
   const colorR = useSharedValue(0);
   const colorG = useSharedValue(0);
   const colorB = useSharedValue(0);
+  const colorA = useSharedValue(1);
 
   const upRgb = hexToRgb(palette.dotUp);
   const downRgb = hexToRgb(palette.dotDown);
   const accentRgb = hexToRgb(palette.badgeBg);
+  // TGFX only animates a `color` prop given as a live `[r,g,b,a]` channel
+  // array (0–1 each) — a plain CSS string is baked into the compiled scene
+  // once and never re-read, so the lerp below would otherwise freeze the
+  // fill at whatever it was on the first frame. `background` is a static
+  // per-render prop, so it's parsed once here (on the JS thread, not inside
+  // the worklet below) rather than on every frame.
+  const backgroundRgba = background ? parseColorRgba(background) : null;
 
   // Pill path is built into a reused PathBuilder and finalized with detach()
   // each frame — a fresh immutable SkPath, no per-frame Skia.Path.Make().
@@ -84,6 +93,10 @@ export function useBadge(
         textY: 0,
         text: "",
         bgColor: palette.badgeBg,
+        bgR: accentRgb[0] / 255,
+        bgG: accentRgb[1] / 255,
+        bgB: accentRgb[2] / 255,
+        bgA: 1,
         textColor: palette.badgeText,
       };
     }
@@ -222,37 +235,59 @@ export function useBadge(
     const fm = font.getMetrics();
     const textY = dotY - (fm.ascent + fm.descent) / 2;
 
+    // `bgColor` (a formatted string) is kept for callers that just want the
+    // logical color; `bgR`/`bgG`/`bgB`/`bgA` (0–1 channels) are what actually
+    // drive the live fill — see the comment on `backgroundRgba` above. Only
+    // the momentum branch changes frame to frame, so the others just snap
+    // (`colorSpeed = 1`) — same visible result as the old static string.
     let bgColor: string;
+    let targetRgba: [number, number, number, number];
+    let colorSpeed = 1;
     if (background) {
       bgColor = background;
+      targetRgba = backgroundRgba!;
     } else if (variant === "minimal") {
       bgColor = "rgba(255,255,255,0.95)";
+      targetRgba = [255, 255, 255, 0.95];
     } else if (momentum) {
       const m = momentum.get();
       const targetRgb = m === "up" ? upRgb : m === "down" ? downRgb : accentRgb;
-      colorR.set(
-        lerp(colorR.get(), targetRgb[0], badgeColorSpeed, MS_PER_FRAME_60FPS),
-      );
-      colorG.set(
-        lerp(colorG.get(), targetRgb[1], badgeColorSpeed, MS_PER_FRAME_60FPS),
-      );
-      colorB.set(
-        lerp(colorB.get(), targetRgb[2], badgeColorSpeed, MS_PER_FRAME_60FPS),
-      );
+      targetRgba = [targetRgb[0], targetRgb[1], targetRgb[2], 1];
+      colorSpeed = badgeColorSpeed;
+      // Placeholder; overwritten below once colorR/G/B have been lerped.
+      bgColor = "";
+    } else {
+      bgColor = palette.badgeBg;
+      targetRgba = [accentRgb[0], accentRgb[1], accentRgb[2], 1];
+    }
+    colorR.set(lerp(colorR.get(), targetRgba[0], colorSpeed, MS_PER_FRAME_60FPS));
+    colorG.set(lerp(colorG.get(), targetRgba[1], colorSpeed, MS_PER_FRAME_60FPS));
+    colorB.set(lerp(colorB.get(), targetRgba[2], colorSpeed, MS_PER_FRAME_60FPS));
+    colorA.set(lerp(colorA.get(), targetRgba[3], colorSpeed, MS_PER_FRAME_60FPS));
+    if (momentum) {
       bgColor = lerpColor(
         [colorR.get(), colorG.get(), colorB.get()],
         [colorR.get(), colorG.get(), colorB.get()],
         0,
       );
-    } else {
-      bgColor = palette.badgeBg;
     }
 
     const textColor =
       textColorOverride ??
       (variant === "minimal" ? "rgba(100,100,100,1)" : palette.badgeText);
 
-    return { path: b.detach(), textX, textY, text, bgColor, textColor };
+    return {
+      path: b.detach(),
+      textX,
+      textY,
+      text,
+      bgColor,
+      bgR: colorR.get() / 255,
+      bgG: colorG.get() / 255,
+      bgB: colorB.get() / 255,
+      bgA: colorA.get(),
+      textColor,
+    };
   });
 
   return badge;

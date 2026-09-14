@@ -13,6 +13,10 @@ interface BadgeData {
   textY: number;
   text: string;
   bgColor: string;
+  bgR: number;
+  bgG: number;
+  bgB: number;
+  bgA: number;
   textColor: string;
 }
 
@@ -36,7 +40,14 @@ export function BadgeOverlay({
   offsetY?: number;
 }) {
   const badgePath = useDerivedValue(() => badge.value.path);
-  const bgColor = useDerivedValue(() => badge.value.bgColor);
+  // A plain color string is baked into the compiled scene once and never
+  // re-read, so an animated fill (the momentum-driven badge background)
+  // needs the live `[r,g,b,a]` channel form instead — see the comment on
+  // `backgroundRgba` in useBadge.ts.
+  const bgR = useDerivedValue(() => badge.value.bgR);
+  const bgG = useDerivedValue(() => badge.value.bgG);
+  const bgB = useDerivedValue(() => badge.value.bgB);
+  const bgA = useDerivedValue(() => badge.value.bgA);
   const textX = useDerivedValue(() => badge.value.textX);
   const textY = useDerivedValue(() => badge.value.textY);
   const text = useDerivedValue(() => badge.value.text);
@@ -49,7 +60,7 @@ export function BadgeOverlay({
 
   return (
     <Group transform={transform}>
-      <Path path={badgePath} style="fill" color={bgColor} />
+      <Path path={badgePath} style="fill" color={[bgR, bgG, bgB, bgA]} />
       {borderColor != null && (
         <Path
           path={badgePath}

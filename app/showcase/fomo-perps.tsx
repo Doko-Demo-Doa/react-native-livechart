@@ -1,6 +1,5 @@
 import { JetBrainsMono_400Regular } from "@expo-google-fonts/jetbrains-mono";
 import { Ionicons } from "@expo/vector-icons";
-import { Canvas, Path } from "react-native-tgfx";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef, useState, type RefObject } from "react";
@@ -27,7 +26,6 @@ import {
 import Animated, {
   Easing,
   interpolateColor,
-  type SharedValue,
   SlideInDown,
   useAnimatedProps,
   useAnimatedReaction,
@@ -36,8 +34,10 @@ import Animated, {
   useSharedValue,
   withSequence,
   withTiming,
+  type SharedValue,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Canvas, Path } from "react-native-tgfx";
 import { runOnJS } from "react-native-worklets";
 
 import { useSimulatedChartData } from "../../sim/useSimulatedChartData";
@@ -799,6 +799,8 @@ function PerpsChart({
   return (
     <View style={styles.chartWrap}>
       <LiveChart
+        yAxis={false}
+        badge={false}
         ref={chartRef}
         data={data}
         value={value}
@@ -841,7 +843,6 @@ function PerpsChart({
         }
         formatValue={formatUsd}
         valueLine={{ intervals: [2, 4], strokeWidth: 1.5, color: trendColor }}
-        badge={{ followViewEdge: true, tail: false, radius: 1 }}
         renderTooltip={PerpsTooltip}
         scrub={{ tooltipPlacement: "top", dimOpacity: 1 }}
         timeScroll={{ gesture: "holdToScrub", scrubHoldMs: 450 }}

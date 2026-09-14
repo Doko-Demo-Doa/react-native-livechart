@@ -53,6 +53,11 @@ const SECTIONS: DemoSection[] = [
         blurb: "mode=candle: timeframes, candle colors, OHLC bodies + wicks.",
       },
       {
+        href: "/demo/static-candlestick" as Href,
+        title: "Static candlestick",
+        blurb: "Fixed OHLCV snapshot: candles, volume, and scrubbing without a live feed.",
+      },
+      {
         href: "/demo/empty-candles" as Href,
         title: "Chart gaps",
         blurb: "Review semantic line/candle gaps and configurable bridge, band, and label styles against a live feed.",

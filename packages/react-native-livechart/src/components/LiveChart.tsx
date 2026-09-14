@@ -28,14 +28,7 @@ import { scheduleOnRN, scheduleOnUI } from "react-native-worklets";
  *
  * @see https://github.com/benjitaylor/liveline
  */
-import {
-  Canvas,
-  Group,
-  LinearGradient,
-  Path,
-  Rect,
-  vec,
-} from "../tgfx";
+import { Canvas, Group, LinearGradient, Path, Rect, vec } from "../tgfx";
 
 import {
   DEFAULT_ACCENT_COLOR,
@@ -43,51 +36,52 @@ import {
   SCRUB_OVERLAY_FADE_MS,
 } from "../constants";
 import {
+  liveIndicatorScrollOpacity,
+  resolveHideLiveOnScrollBack,
+} from "../core/liveIndicatorVisibility";
+import type {
+  ResolvedCandleGapsConfig,
+  ResolvedThresholdConfig,
+} from "../core/resolveConfig";
+import {
   resolveAreaDots,
   resolveAxisLabel,
   resolveBadge,
   resolveCandleGaps,
   resolveDegen,
   resolveDot,
+  resolveFling,
   resolveGradient,
   resolveGridStyle,
   resolveLeftEdgeFade,
   resolveLoading,
   resolveMarkerCluster,
   resolveMetrics,
+  resolveOverscroll,
   resolvePulse,
+  resolveReturnToLiveMs,
   resolveScrub,
   resolveScrubAction,
-  resolveTransitions,
-  resolveFling,
-  resolveOverscroll,
-  resolveReturnToLiveMs,
   resolveSelectionDot,
   resolveThreshold,
-  THRESHOLD_FILL_OPACITY_DEFAULT,
   resolveTradeStream,
+  resolveTransitions,
   resolveValueLine,
   resolveVolume,
-  resolveZoom,
   resolveXAxis,
   resolveYAxis,
+  resolveZoom,
+  THRESHOLD_FILL_OPACITY_DEFAULT,
 } from "../core/resolveConfig";
-import type {
-  ResolvedCandleGapsConfig,
-  ResolvedThresholdConfig,
-} from "../core/resolveConfig";
-import {
-  liveIndicatorScrollOpacity,
-  resolveHideLiveOnScrollBack,
-} from "../core/liveIndicatorVisibility";
 import { resolveSegment, type ResolvedSegment } from "../core/resolveSegment";
 import { useLiveChartEngine } from "../core/useLiveChartEngine";
 import {
-  computeCandleFocusPassOpacity,
   computeCandleFocusClip,
+  computeCandleFocusPassOpacity,
   HIDDEN_CANDLE_FOCUS_CLIP,
 } from "../draw/candle";
 import { dotGlowRadialOutset, pulseRadialOutset } from "../draw/line";
+import { computeScrubDotY } from "../hooks/crosshairShared";
 import { resolveChartLayout } from "../hooks/resolveChartLayout";
 import { useBadge } from "../hooks/useBadge";
 import { useCandleGapPaths } from "../hooks/useCandleGapPaths";
@@ -100,28 +94,28 @@ import { useChartReveal } from "../hooks/useChartReveal";
 import { useChartSkiaFont } from "../hooks/useChartSkiaFont";
 import { useCrosshair } from "../hooks/useCrosshair";
 import { useDegen } from "../hooks/useDegen";
+import { useLineGapPaths } from "../hooks/useLineGapPaths";
 import { useLiveChartHasData } from "../hooks/useLiveChartHasData";
 import { useLiveDot } from "../hooks/useLiveDot";
-import { useLineGapPaths } from "../hooks/useLineGapPaths";
 import { useMarkers } from "../hooks/useMarkers";
-import { useReferenceDrag } from "../hooks/useReferenceDrag";
-import { useReferenceLinePress } from "../hooks/useReferenceLinePress";
 import { useModeBlend } from "../hooks/useModeBlend";
 import { resolveMomentumProp, useMomentum } from "../hooks/useMomentum";
 import { AXIS_GRAB_MIN_PX, usePanScroll } from "../hooks/usePanScroll";
 import { resetPinchZoom, usePinchZoom } from "../hooks/usePinchZoom";
+import { useReferenceDrag } from "../hooks/useReferenceDrag";
+import { useReferenceLinePress } from "../hooks/useReferenceLinePress";
+import { useSingleChartReverseMorphInputs } from "../hooks/useReverseMorphEngineInputs";
 import {
   SERIES_INDICATOR_FADE_MS,
   useSeriesIndicatorOpacity,
 } from "../hooks/useSeriesIndicatorOpacity";
-import { useVisibleRange } from "../hooks/useVisibleRange";
-import { useSingleChartReverseMorphInputs } from "../hooks/useReverseMorphEngineInputs";
 import {
   useThreshold,
   useThresholdSeries,
   useThresholdSplitUniforms,
 } from "../hooks/useThreshold";
 import { useTradeStream } from "../hooks/useTradeStream";
+import { useVisibleRange } from "../hooks/useVisibleRange";
 import { useXAxis } from "../hooks/useXAxis";
 import { useYAxis } from "../hooks/useYAxis";
 import {
@@ -133,7 +127,6 @@ import {
   candleGapBucketStartAtTime,
   candleGapDefaultLabel,
 } from "../math/candleGaps";
-import { computeScrubDotY } from "../hooks/crosshairShared";
 import {
   groupReferenceLines,
   type ReferenceGrouping,
@@ -152,7 +145,6 @@ import {
   resolveTheme,
 } from "../theme";
 import type {
-  CandlePoint,
   LiveChartHandle,
   LiveChartPalette,
   LiveChartPoint,
@@ -160,7 +152,33 @@ import type {
   Marker,
   ReferenceLine,
 } from "../types";
+import { AreaDotsOverlay } from "./AreaDotsOverlay";
+import { AxisLabelOverlay } from "./AxisLabelOverlay";
+import { BadgeOverlay } from "./BadgeOverlay";
+import { ChartOverlayLayer } from "./ChartOverlayLayer";
+import { CrosshairOverlay } from "./CrosshairOverlay";
+import { CustomMarkerOverlay } from "./CustomMarkerOverlay";
+import {
+  customReferenceLineFlags,
+  CustomReferenceLineOverlay,
+} from "./CustomReferenceLineOverlay";
 import { CustomThresholdBadgeOverlay } from "./CustomThresholdBadgeOverlay";
+import { CustomTooltipOverlay } from "./CustomTooltipOverlay";
+import { DegenParticlesOverlay } from "./DegenParticlesOverlay";
+import { DotOverlay } from "./DotOverlay";
+import {
+  ExtremaConnectorOverlay,
+  labelConnector,
+} from "./ExtremaConnectorOverlay";
+import { LeftEdgeFade } from "./LeftEdgeFade";
+import { LoadingOverlay } from "./LoadingOverlay";
+import { MarkerOverlay } from "./MarkerOverlay";
+import { MultiSeriesTooltipStack } from "./MultiSeriesTooltipStack";
+import { ReferenceLineGroupOverlay } from "./ReferenceLineGroupOverlay";
+import { ReferenceLineOverlay } from "./ReferenceLineOverlay";
+import { ScrubActionOverlay } from "./ScrubActionOverlay";
+import { SegmentDividerOverlay } from "./SegmentDividerOverlay";
+import { SegmentLineGradient } from "./SegmentLineGradient";
 import {
   ThresholdBadgeOverlay,
   ThresholdLineOverlay,
@@ -169,35 +187,9 @@ import {
   THRESHOLD_SPLIT_AVAILABLE,
   ThresholdSplitShader,
 } from "./ThresholdSplitShader";
-import { AreaDotsOverlay } from "./AreaDotsOverlay";
-import { AxisLabelOverlay } from "./AxisLabelOverlay";
-import {
-  ExtremaConnectorOverlay,
-  labelConnector,
-} from "./ExtremaConnectorOverlay";
-import { CustomMarkerOverlay } from "./CustomMarkerOverlay";
-import {
-  CustomReferenceLineOverlay,
-  customReferenceLineFlags,
-} from "./CustomReferenceLineOverlay";
-import { CustomTooltipOverlay } from "./CustomTooltipOverlay";
-import { BadgeOverlay } from "./BadgeOverlay";
-import { ChartOverlayLayer } from "./ChartOverlayLayer";
-import { CrosshairOverlay } from "./CrosshairOverlay";
-import { DegenParticlesOverlay } from "./DegenParticlesOverlay";
-import { DotOverlay } from "./DotOverlay";
-import { LeftEdgeFade } from "./LeftEdgeFade";
-import { LoadingOverlay } from "./LoadingOverlay";
-import { MarkerOverlay } from "./MarkerOverlay";
-import { MultiSeriesTooltipStack } from "./MultiSeriesTooltipStack";
-import { ValueTextOverlay } from "./ValueTextOverlay";
-import { ReferenceLineGroupOverlay } from "./ReferenceLineGroupOverlay";
-import { ReferenceLineOverlay } from "./ReferenceLineOverlay";
-import { ScrubActionOverlay } from "./ScrubActionOverlay";
-import { SegmentDividerOverlay } from "./SegmentDividerOverlay";
-import { SegmentLineGradient } from "./SegmentLineGradient";
 import { TradeStreamOverlay } from "./TradeStreamOverlay";
 import { ValueLineOverlay } from "./ValueLineOverlay";
+import { ValueTextOverlay } from "./ValueTextOverlay";
 import { XAxisOverlay } from "./XAxisOverlay";
 import { YAxisOverlay } from "./YAxisOverlay";
 
@@ -801,12 +793,11 @@ function useLiveChartController({
     candles: isCandle ? candlesEngine : candles,
     liveCandle: isCandle ? liveEngine : liveCandle,
     candleGaps: candleGapsCfg?.gaps,
-    candleGapBridgeNoTrades:
-      Boolean(candleGapsCfg?.styles["no-trades"].bridge),
-    candleGapBridgeUnavailable:
-      Boolean(candleGapsCfg?.styles.unavailable.bridge),
-    candleGapBridgeUnknown:
-      Boolean(candleGapsCfg?.styles.unknown.bridge),
+    candleGapBridgeNoTrades: Boolean(candleGapsCfg?.styles["no-trades"].bridge),
+    candleGapBridgeUnavailable: Boolean(
+      candleGapsCfg?.styles.unavailable.bridge,
+    ),
+    candleGapBridgeUnknown: Boolean(candleGapsCfg?.styles.unknown.bridge),
   });
 
   // Mirror the UI-thread scroll state to React so the floating y-axis can keep
@@ -1087,10 +1078,8 @@ function useLiveChartController({
         liveCandle: liveEngine,
         candleWidthSecs: candleWidth,
         gaps: candleGapsCfg?.gaps,
-        bridgeNoTrades:
-          Boolean(candleGapsCfg?.styles["no-trades"].bridge),
-        bridgeUnavailable:
-          Boolean(candleGapsCfg?.styles.unavailable.bridge),
+        bridgeNoTrades: Boolean(candleGapsCfg?.styles["no-trades"].bridge),
+        bridgeUnavailable: Boolean(candleGapsCfg?.styles.unavailable.bridge),
         bridgeUnknown: Boolean(candleGapsCfg?.styles.unknown.bridge),
       }
     : lineGapsCfg
@@ -1724,32 +1713,34 @@ function ChartYAxisLayer({
     axisAutoHideOpacity,
   } = model;
   // Fold the axis auto-hide fade into the reveal opacity (1 when the feature
-  // is off).
+  // is off). Passed down as `groupOpacity` rather than an extra wrapping
+  // `<Group opacity>` — TGFX freezes a chain's alpha once two *animated*
+  // Group opacities nest (only one slot per draw), which otherwise leaves the
+  // grid/labels permanently at whatever alpha happened to be baked in first.
   const yAxisGroupOpacity = useDerivedValue(
     () => reveal.yAxisOpacity.value * axisAutoHideOpacity.value,
   );
   return (
-    <Group opacity={yAxisGroupOpacity}>
-      <YAxisOverlay
-        variant={variant}
-        float={variant === "labels" && yAxisFloat}
-        entries={entries}
-        engine={engine}
-        padding={effectivePadding}
-        palette={palette}
-        font={skiaFont}
-        badge={badgeUsesRightGutter}
-        badgeTail={badgeCfg?.tail ?? true}
-        badgeMetrics={metricsCfg.badge}
-        badgeCenterY={badgeUsesRightGutter ? dotY : undefined}
-        badgeFontSize={badgeUsesRightGutter ? badgeFont.getSize() : undefined}
-        badgeOffsetY={badgeCfg?.offsetY ?? 0}
-        badgeOpacity={badgeUsesRightGutter ? liveBadgeOpacity : undefined}
-        gridStyle={gridStyleCfg}
-        labelRightMargin={yAxisCfg?.labelRightMargin}
-        gridEndGap={yAxisCfg?.gridEndGap}
-      />
-    </Group>
+    <YAxisOverlay
+      variant={variant}
+      float={variant === "labels" && yAxisFloat}
+      entries={entries}
+      engine={engine}
+      padding={effectivePadding}
+      palette={palette}
+      font={skiaFont}
+      badge={badgeUsesRightGutter}
+      badgeTail={badgeCfg?.tail ?? true}
+      badgeMetrics={metricsCfg.badge}
+      badgeCenterY={badgeUsesRightGutter ? dotY : undefined}
+      badgeFontSize={badgeUsesRightGutter ? badgeFont.getSize() : undefined}
+      badgeOffsetY={badgeCfg?.offsetY ?? 0}
+      badgeOpacity={badgeUsesRightGutter ? liveBadgeOpacity : undefined}
+      gridStyle={gridStyleCfg}
+      labelRightMargin={yAxisCfg?.labelRightMargin}
+      gridEndGap={yAxisCfg?.gridEndGap}
+      groupOpacity={yAxisGroupOpacity}
+    />
   );
 }
 
@@ -1770,17 +1761,18 @@ function ChartXAxisLayer({ model }: { model: LiveChartModel }) {
     skiaFont,
   );
   return (
-    // Axis auto-hide fade (1 when the feature is off).
-    <Group opacity={model.axisAutoHideOpacity}>
-      <XAxisOverlay
-        entries={xAxisEntries}
-        engine={engine}
-        padding={effectivePadding}
-        palette={palette}
-        font={skiaFont}
-        volumeBandHeight={volumeBandHeight}
-      />
-    </Group>
+    <XAxisOverlay
+      entries={xAxisEntries}
+      engine={engine}
+      padding={effectivePadding}
+      palette={palette}
+      font={skiaFont}
+      volumeBandHeight={volumeBandHeight}
+      // Axis auto-hide fade (1 when the feature is off), folded into the axis
+      // line/labels directly rather than an extra wrapping `<Group opacity>` —
+      // see the comment in ChartYAxisLayer.
+      groupOpacity={model.axisAutoHideOpacity}
+    />
   );
 }
 
@@ -1980,11 +1972,7 @@ function ChartCandleGapLayer({
     model.metricsCfg.candle,
   );
   const batch = (
-    <GapBridgePathBatch
-      paths={paths}
-      config={config}
-      palette={model.palette}
-    />
+    <GapBridgePathBatch paths={paths} config={config} palette={model.palette} />
   );
   return focusOtherCandles ? (
     <>
@@ -2001,17 +1989,9 @@ function ChartCandleGapLayer({
 /** Line-mode bridge paths live in a child so candle charts register no worklets. */
 function ChartLineGapLayer({ model }: { model: LiveChartModel }) {
   const config = model.lineGapsCfg!;
-  const paths = useLineGapPaths(
-    model.engine,
-    model.effectivePadding,
-    config,
-  );
+  const paths = useLineGapPaths(model.engine, model.effectivePadding, config);
   return (
-    <GapBridgePathBatch
-      paths={paths}
-      config={config}
-      palette={model.palette}
-    />
+    <GapBridgePathBatch paths={paths} config={config} palette={model.palette} />
   );
 }
 

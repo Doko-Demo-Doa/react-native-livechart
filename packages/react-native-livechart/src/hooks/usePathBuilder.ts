@@ -66,10 +66,59 @@ function createPathBuilder(): ReanimatedPathBuilder {
         .lineTo(rect.x, rect.y + height)
         .close();
     },
-    addRRect(rect) {
-      return builder.addRect(rect.rect ?? rect);
+    addRRect(rrect) {
+      const rect = rrect.rect ?? rrect;
+      const width = rect.width ?? rect.w ?? 0;
+      const height = rect.height ?? rect.h ?? 0;
+      // Callers in this codebase only ever pass a uniform corner radius
+      // (rx === ry); a non-uniform ellipse corner isn't needed here.
+      const r = Math.max(
+        0,
+        Math.min(rrect.rx ?? rrect.r ?? 0, width / 2, height / 2),
+      );
+      if (r <= 0) {
+        return builder.addRect(rect);
+      }
+      const { x, y } = rect;
+      commands +=
+        `M${x + r} ${y} ` +
+        `L${x + width - r} ${y} ` +
+        `A${r} ${r} 0 0 1 ${x + width} ${y + r} ` +
+        `L${x + width} ${y + height - r} ` +
+        `A${r} ${r} 0 0 1 ${x + width - r} ${y + height} ` +
+        `L${x + r} ${y + height} ` +
+        `A${r} ${r} 0 0 1 ${x} ${y + height - r} ` +
+        `L${x} ${y + r} ` +
+        `A${r} ${r} 0 0 1 ${x + r} ${y} ` +
+        `Z `;
+      return builder;
     },
-    arcToOval() {
+    arcToOval(oval, start, sweep, forceMoveTo) {
+      // `oval` is Skia's arcToOval bounding box; `start`/`sweep` are degrees in
+      // the same clockwise-from-3-o'clock convention SVG's arc uses (both are
+      // y-down coordinate systems), so this maps straight onto an SVG `A`
+      // command instead of approximating the arc with cubic segments.
+      const o = oval as { x: number; y: number; width?: number; height?: number; w?: number; h?: number };
+      const width = o.width ?? o.w ?? 0;
+      const height = o.height ?? o.h ?? 0;
+      const rx = width / 2;
+      const ry = height / 2;
+      const cx = o.x + rx;
+      const cy = o.y + ry;
+      const startRad = (start * Math.PI) / 180;
+      const endRad = ((start + sweep) * Math.PI) / 180;
+      const startX = cx + rx * Math.cos(startRad);
+      const startY = cy + ry * Math.sin(startRad);
+      const endX = cx + rx * Math.cos(endRad);
+      const endY = cy + ry * Math.sin(endRad);
+      if (forceMoveTo) {
+        builder.moveTo(startX, startY);
+      } else {
+        commands += `L${startX} ${startY} `;
+      }
+      const largeArcFlag = Math.abs(sweep) > 180 ? 1 : 0;
+      const sweepFlag = sweep > 0 ? 1 : 0;
+      commands += `A${rx} ${ry} 0 ${largeArcFlag} ${sweepFlag} ${endX} ${endY} `;
       return builder;
     },
     detach() {

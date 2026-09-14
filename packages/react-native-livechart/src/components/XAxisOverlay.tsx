@@ -20,6 +20,7 @@ export function XAxisOverlay({
   palette,
   font,
   volumeBandHeight = 0,
+  groupOpacity,
 }: {
   entries: SharedValue<XAxisEntry[]>;
   engine: ChartEngineLayout;
@@ -32,6 +33,12 @@ export function XAxisOverlay({
    * band, while the price plot above shrinks. `0` = no band (default).
    */
   volumeBandHeight?: number;
+  /**
+   * Ambient reveal/auto-hide opacity, folded into the axis line and every
+   * label's own alpha instead of an extra wrapping `<Group opacity>` — TGFX
+   * only supports one animated opacity per paint chain (see AnimatedLabel).
+   */
+  groupOpacity?: SharedValue<number>;
 }) {
   const axisBuilder = usePathBuilder();
 
@@ -77,12 +84,14 @@ export function XAxisOverlay({
 
   return (
     <Group>
-      <Path
-        path={axisPath}
-        style="stroke"
-        strokeWidth={1}
-        color={palette.gridLine}
-      />
+      <Group opacity={groupOpacity}>
+        <Path
+          path={axisPath}
+          style="stroke"
+          strokeWidth={1}
+          color={palette.gridLine}
+        />
+      </Group>
       {Array.from({ length: MAX_X_LABELS }, (_, i) => (
         <AnimatedLabel
           key={i}
@@ -90,6 +99,7 @@ export function XAxisOverlay({
           index={i}
           font={font}
           color={palette.timeLabel}
+          groupOpacity={groupOpacity}
         />
       ))}
     </Group>

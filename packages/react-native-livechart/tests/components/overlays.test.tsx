@@ -92,6 +92,10 @@ describe("BadgeOverlay", () => {
         textY: 20,
         text: "9.99",
         bgColor: "#000",
+        bgR: 0,
+        bgG: 0,
+        bgB: 0,
+        bgA: 1,
         textColor: "#fff",
       });
       return <BadgeOverlay badge={badge} font={font} />;
@@ -107,6 +111,10 @@ describe("BadgeOverlay", () => {
         textY: 20,
         text: "9.99",
         bgColor: "#000",
+        bgR: 0,
+        bgG: 0,
+        bgB: 0,
+        bgA: 1,
         textColor: "#fff",
       });
       return (

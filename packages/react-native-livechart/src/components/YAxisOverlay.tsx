@@ -62,6 +62,7 @@ export function YAxisOverlay({
   float = false,
   labelRightMargin,
   gridEndGap = 0,
+  groupOpacity,
 }: {
   entries: SharedValue<YAxisEntry[]>;
   engine: ChartEngineLayout;
@@ -101,6 +102,12 @@ export function YAxisOverlay({
   labelRightMargin?: number;
   /** Gap between the grid-line end and the shared label column. */
   gridEndGap?: number;
+  /**
+   * Ambient reveal/auto-hide opacity, folded into the grid line and every
+   * label's own alpha instead of an extra wrapping `<Group opacity>` — TGFX
+   * only supports one animated opacity per paint chain (see AnimatedLabel).
+   */
+  groupOpacity?: SharedValue<number>;
 }) {
   const gridColor = gridStyle?.color ?? palette.gridLine;
   const gridWidth = gridStyle?.strokeWidth ?? 1;
@@ -184,10 +191,14 @@ export function YAxisOverlay({
     return result;
   });
 
+  const combinedGridOpacity = useDerivedValue(
+    () => gridOpacity * (groupOpacity ? groupOpacity.get() : 1),
+  );
+
   return (
     <Group>
       {variant !== "labels" && (
-        <Group opacity={gridOpacity}>
+        <Group opacity={combinedGridOpacity}>
           <Path
             path={gridLinesPath}
             style="stroke"
@@ -208,6 +219,7 @@ export function YAxisOverlay({
             index={i}
             font={font}
             color={palette.gridLabel}
+            groupOpacity={groupOpacity}
           />
         ))}
     </Group>
