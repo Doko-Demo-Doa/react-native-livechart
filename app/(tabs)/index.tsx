@@ -35,6 +35,26 @@ const SECTIONS: DemoSection[] = [
     ],
   },
   {
+    title: "Renderer backends",
+    data: [
+      {
+        href: "/demo/graph-backend-skia" as Href,
+        title: "react-native-graph · Skia",
+        blurb: "Shared 72-point line chart through the default Skia canvas.",
+      },
+      {
+        href: "/demo/graph-backend-tgfx" as Href,
+        title: "react-native-graph · tGFX",
+        blurb: "The same line chart through Tencent's tGFX GPU canvas.",
+      },
+      {
+        href: "/demo/graph-backend-thor" as Href,
+        title: "react-native-graph · Thor",
+        blurb: "The same line chart through ThorVG's UI-thread canvas.",
+      },
+    ],
+  },
+  {
     title: "Chart types",
     data: [
       {
