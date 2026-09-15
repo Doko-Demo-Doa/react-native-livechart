@@ -18,6 +18,7 @@ import {
   type ReferenceLineLayout,
 } from "../hooks/useReferenceLine";
 import { MONO_FONT_FAMILY } from "../lib/monoFontFamily";
+import { ambientOpacity } from "../math/opacity";
 import { referenceLineForm, resolveReferenceBadge } from "../math/referenceLines";
 import type { FontConfig, LiveChartPalette, ReferenceLine } from "../types";
 import { ReferenceLineSeriesOverlay } from "./ReferenceLineSeriesOverlay";
@@ -94,6 +95,12 @@ type ReferenceLineOverlayProps = {
   labelRightMargin?: number;
   /** Gap between the drawn line endpoint and the label column. */
   gridEndGap?: number;
+  /**
+   * Ambient opacity (e.g. the scrub fade), folded into the line/band's own
+   * alpha instead of an extra wrapping `<Group opacity>` — TGFX only supports
+   * one animated opacity per paint chain (see AnimatedLabel/XAxisOverlay).
+   */
+  groupOpacity?: SharedValue<number>;
 };
 
 /**
@@ -111,6 +118,7 @@ export function ReferenceLineOverlay(props: ReferenceLineOverlayProps) {
         formatValue={props.formatValue}
         font={props.font}
         badgeLayer={props.badgeLayer ?? false}
+        groupOpacity={props.groupOpacity}
       />
     );
   }
@@ -135,6 +143,7 @@ function ReferenceLineStaticOverlay({
   yAxisEntries,
   labelRightMargin,
   gridEndGap,
+  groupOpacity,
 }: ReferenceLineOverlayProps) {
   const form = referenceLineForm(line);
   const isBand = form === "value-band" || form === "time-band";
@@ -216,6 +225,7 @@ function ReferenceLineStaticOverlay({
         isTimeBand={form === "time-band"}
         bandFillOpacity={bandFillOpacity}
         hasBandBorder={hasBandBorder}
+        groupOpacity={groupOpacity}
       />
     );
   }
@@ -240,6 +250,7 @@ function ReferenceLineStaticOverlay({
       customTagWidths={customTagWidths}
       groupHidden={groupHidden}
       index={index}
+      groupOpacity={groupOpacity}
     />
   );
 }
@@ -256,6 +267,7 @@ function ReferenceLineBasePass({
   isTimeBand,
   bandFillOpacity,
   hasBandBorder,
+  groupOpacity,
 }: {
   layout: SharedValue<ReferenceLineLayout>;
   color: string;
@@ -267,6 +279,7 @@ function ReferenceLineBasePass({
   isTimeBand: boolean;
   bandFillOpacity: number;
   hasBandBorder: boolean;
+  groupOpacity?: SharedValue<number>;
 }) {
   const lineBuilder = usePathBuilder();
   const bandBuilder = usePathBuilder();
@@ -313,14 +326,17 @@ function ReferenceLineBasePass({
   });
   const lineOpacity = useDerivedValue(() => {
     const l = layout.get();
-    return l.visible && l.drawLine && !isBand ? strokeOpacity : 0;
+    const base = l.visible && l.drawLine && !isBand ? strokeOpacity : 0;
+    return base * ambientOpacity(groupOpacity);
   });
-  const bandOpacity = useDerivedValue(() =>
-    layout.get().visible && isBand ? bandFillOpacity : 0,
-  );
-  const bandBorderOpacity = useDerivedValue(() =>
-    layout.get().visible && hasBandBorder ? strokeOpacity : 0,
-  );
+  const bandOpacity = useDerivedValue(() => {
+    const base = layout.get().visible && isBand ? bandFillOpacity : 0;
+    return base * ambientOpacity(groupOpacity);
+  });
+  const bandBorderOpacity = useDerivedValue(() => {
+    const base = layout.get().visible && hasBandBorder ? strokeOpacity : 0;
+    return base * ambientOpacity(groupOpacity);
+  });
 
   return (
     <Group>
@@ -377,6 +393,7 @@ function ReferenceLineBadgePass({
   customTagWidths,
   groupHidden,
   index,
+  groupOpacity,
 }: {
   layout: SharedValue<ReferenceLineLayout>;
   color: string;
@@ -396,6 +413,12 @@ function ReferenceLineBadgePass({
   customTagWidths?: SharedValue<number[]>;
   groupHidden?: SharedValue<boolean[]>;
   index: number;
+  /**
+   * Ambient opacity (e.g. the scrub fade), folded into each piece's own alpha
+   * instead of an extra wrapping `<Group opacity>` — TGFX only supports one
+   * animated opacity per paint chain (see AnimatedLabel/XAxisOverlay).
+   */
+  groupOpacity?: SharedValue<number>;
 }) {
   const connBuilder = usePathBuilder();
   const chevBuilder = usePathBuilder();
@@ -454,23 +477,32 @@ function ReferenceLineBadgePass({
     const grouped = groupHidden ? groupHidden.get()[index] === true : false;
     const customTagActive =
       suppressTag || (suppressTagWhenOffAxis && l.offAxis);
-    return !customTagActive && !grouped && l.visible && l.badge ? 1 : 0;
+    const base = !customTagActive && !grouped && l.visible && l.badge ? 1 : 0;
+    return base * ambientOpacity(groupOpacity);
   });
   const connectorOpacity = useDerivedValue(() => {
     const l = layout.get();
     const grouped = groupHidden ? groupHidden.get()[index] === true : false;
-    return !grouped && l.visible && l.badge && l.connStart >= 0 ? 1 : 0;
+    const base = !grouped && l.visible && l.badge && l.connStart >= 0 ? 1 : 0;
+    return base * ambientOpacity(groupOpacity);
   });
   const labelOpacity = useDerivedValue(() => {
     const l = layout.get();
     const grouped = groupHidden ? groupHidden.get()[index] === true : false;
     const customTagActive =
       suppressTag || (suppressTagWhenOffAxis && l.offAxis);
-    return !customTagActive && !grouped && l.visible && l.label.length > 0 ? 1 : 0;
+    const base =
+      !customTagActive && !grouped && l.visible && l.label.length > 0 ? 1 : 0;
+    return base * ambientOpacity(groupOpacity);
   });
+  // Sibling of the pill/border/chevron Group below (not nested inside it) so
+  // the icon's own visibility factor doesn't stack a second animated Group
+  // opacity on top of `badgeOpacity`. Reuses `badgeOpacity` (already the
+  // combined visibility + ambient value) instead of re-deriving it.
   const iconOpacity = useDerivedValue(() => {
     const l = layout.get();
-    return l.visible && l.icon.length > 0 ? 1 : 0;
+    const base = l.visible && l.icon.length > 0 ? 1 : 0;
+    return base * badgeOpacity.get();
   });
   const labelX = useDerivedValue(() => layout.get().labelX);
   const labelY = useDerivedValue(() => layout.get().labelY);
@@ -529,15 +561,15 @@ function ReferenceLineBadgePass({
           strokeCap="round"
           strokeJoin="round"
         />
-        <Group opacity={iconOpacity}>
-          <SkiaText
-            x={iconX}
-            y={labelY}
-            text={iconText}
-            font={badgeFont}
-            color={labelColor}
-          />
-        </Group>
+      </Group>
+      <Group opacity={iconOpacity} transform={badgeTransform}>
+        <SkiaText
+          x={iconX}
+          y={labelY}
+          text={iconText}
+          font={badgeFont}
+          color={labelColor}
+        />
       </Group>
       <Group opacity={labelOpacity} transform={badgeTransform}>
         <SkiaText

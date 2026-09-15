@@ -11,6 +11,7 @@ import type {
   ResolvedDotRingConfig,
   ResolvedPulseConfig,
 } from "../core/resolveConfig";
+import { ambientOpacity } from "../math/opacity";
 import type { LiveChartPalette } from "../types";
 
 const MIN_PULSE_RADIUS = 9;
@@ -32,6 +33,7 @@ export function DotOverlay({
   color,
   viewEnd,
   pulseWhileParked = false,
+  groupOpacity,
 }: {
   dotX: SharedValue<number>;
   dotY: SharedValue<number>;
@@ -57,6 +59,15 @@ export function DotOverlay({
    * live position; edge-pinned `followViewEdge` dots keep the suppression.
    */
   pulseWhileParked?: boolean;
+  /**
+   * Ambient opacity (e.g. the live-dot reveal fade), folded into the pulse
+   * ring's own alpha instead of an extra wrapping `<Group opacity>` — TGFX
+   * only supports one animated opacity per paint chain, so a second nested
+   * one freezes instead of compositing (the ring would grow but never fade).
+   * The dot/ring/glow circles have no opacity of their own, so wrapping them
+   * in a single `<Group opacity={groupOpacity}>` is still safe.
+   */
+  groupOpacity?: SharedValue<number>;
 }) {
   const dotColor = color ?? palette.line;
 
@@ -88,8 +99,11 @@ export function DotOverlay({
     const nowMs = pulseClockMs.value;
     const t = (nowMs % pulse.interval) / pulse.duration;
     if (t >= 1) return 0;
-    return pulse.opacity * (1 - t);
+    return pulse.opacity * (1 - t) * ambientOpacity(groupOpacity);
   });
+  const glowOpacity = useDerivedValue(
+    () => (glow?.opacity ?? 0) * ambientOpacity(groupOpacity),
+  );
 
   return (
     <Group>
@@ -111,22 +125,24 @@ export function DotOverlay({
           cy={dotY}
           r={glow.radius}
           color={glow.color ?? dotColor}
-          opacity={glow.opacity}
+          opacity={glowOpacity}
         >
           <BlurMask blur={glow.blur} style="normal" />
         </Circle>
       )}
 
-      {ring && (
-        <Circle
-          cx={dotX}
-          cy={dotY}
-          r={radius + ring.width}
-          color={ring.color ?? palette.badgeOuterBg}
-        />
-      )}
+      <Group opacity={groupOpacity}>
+        {ring && (
+          <Circle
+            cx={dotX}
+            cy={dotY}
+            r={radius + ring.width}
+            color={ring.color ?? palette.badgeOuterBg}
+          />
+        )}
 
-      <Circle cx={dotX} cy={dotY} r={radius} color={dotColor} />
+        <Circle cx={dotX} cy={dotY} r={radius} color={dotColor} />
+      </Group>
     </Group>
   );
 }

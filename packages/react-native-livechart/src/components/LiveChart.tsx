@@ -1467,7 +1467,7 @@ function useLiveChartController({
   // marker atlas / reference-line draws stay intact (one batched draw each).
   const fadeOverlaysOnScrub =
     !isStatic && scrubCfg !== null && scrubCfg.hideOverlaysOnScrub === true;
-  const overlayScrubFade = useDerivedValue(() =>
+  const overlayScrubFade = useDerivedValue<number>(() =>
     fadeOverlaysOnScrub
       ? withTiming(crosshairScrubActive.get() ? 0 : 1, {
           duration: SCRUB_OVERLAY_FADE_MS,
@@ -2320,27 +2320,28 @@ function ChartStack({
         </Group>
       )}
 
-      {/* Wrapped in a fade group so `scrub.hideOverlaysOnScrub` can ease lines
-          out while scrubbing. Explicit ids keep lines stable when reordered. */}
-      <Group opacity={overlayScrubFade}>
-        {allRefLines.map((rl, i) => (
-          <ReferenceLineOverlay
-            key={refLineKeys[i]}
-            engine={engine}
-            padding={effectivePadding}
-            line={rl}
-            palette={palette}
-            formatValue={formatValue}
-            font={skiaFont}
-            fontProp={fontProp}
-            dragValues={dragValues}
-            index={i}
-            yAxisEntries={yAxisEntries}
-            labelRightMargin={yAxisCfg?.labelRightMargin}
-            gridEndGap={yAxisCfg?.gridEndGap}
-          />
-        ))}
-      </Group>
+      {/* `scrub.hideOverlaysOnScrub` fade folded into each line's own alpha
+          (`groupOpacity`) rather than an extra wrapping `<Group opacity>` —
+          see the comment on `groupOpacity` in ReferenceLineOverlay. Explicit
+          ids keep lines stable when reordered. */}
+      {allRefLines.map((rl, i) => (
+        <ReferenceLineOverlay
+          key={refLineKeys[i]}
+          engine={engine}
+          padding={effectivePadding}
+          line={rl}
+          palette={palette}
+          formatValue={formatValue}
+          font={skiaFont}
+          fontProp={fontProp}
+          dragValues={dragValues}
+          index={i}
+          yAxisEntries={yAxisEntries}
+          labelRightMargin={yAxisCfg?.labelRightMargin}
+          gridEndGap={yAxisCfg?.gridEndGap}
+          groupOpacity={overlayScrubFade}
+        />
+      ))}
 
       {/* Threshold marker line + label (behind the chart line). For a time-varying
           series it traces the threshold polyline; otherwise a horizontal line. */}
@@ -2432,22 +2433,21 @@ function ChartStack({
           scrub dim never clips the live-price badge's left edge. Hidden while
           scrubbing when a selection dot marks the scrub point instead. */}
       {dotCfg.show && (
-        <Group opacity={liveDotOpacity}>
-          <DotOverlay
-            dotX={dotX}
-            dotY={dotY}
-            palette={palette}
-            pulse={pulseCfg}
-            glow={dotCfg.glow}
-            radius={dotCfg.radius}
-            ring={dotCfg.ring}
-            color={dotCfg.color}
-            viewEnd={engine.viewEnd}
-            // A tracking dot marks the honest live position while parked, so
-            // its heartbeat keeps pulsing (useLiveDot tracks the true point).
-            pulseWhileParked={dotTracksParked}
-          />
-        </Group>
+        <DotOverlay
+          dotX={dotX}
+          dotY={dotY}
+          palette={palette}
+          pulse={pulseCfg}
+          glow={dotCfg.glow}
+          radius={dotCfg.radius}
+          ring={dotCfg.ring}
+          color={dotCfg.color}
+          viewEnd={engine.viewEnd}
+          // A tracking dot marks the honest live position while parked, so
+          // its heartbeat keeps pulsing (useLiveDot tracks the true point).
+          pulseWhileParked={dotTracksParked}
+          groupOpacity={liveDotOpacity}
+        />
       )}
 
       {degenCfg && (
@@ -2820,7 +2820,7 @@ function ChartRefBadgeLayer({
   } = model;
   if (allRefLines.length === 0) return null;
   return (
-    <Group transform={degen?.shakeTransform} opacity={overlayScrubFade}>
+    <Group transform={degen?.shakeTransform}>
       {allRefLines.map((rl, i) => (
         <ReferenceLineOverlay
           key={refLineKeys[i]}
@@ -2841,6 +2841,7 @@ function ChartRefBadgeLayer({
           yAxisEntries={yAxisEntries}
           labelRightMargin={yAxisCfg?.labelRightMargin}
           gridEndGap={yAxisCfg?.gridEndGap}
+          groupOpacity={overlayScrubFade}
         />
       ))}
       {/* Collapsed count handles for grouped (near-value) lines. */}

@@ -45,7 +45,8 @@ const SECTIONS: DemoSection[] = [
       {
         href: "/demo/line-denoising" as Href,
         title: "Line denoising",
-        blurb: "simplify: compare the raw path with shape-preserving pixel-tolerance cleanup.",
+        blurb:
+          "simplify: compare the raw path with shape-preserving pixel-tolerance cleanup.",
       },
       {
         href: "/demo/candlestick",
@@ -55,27 +56,32 @@ const SECTIONS: DemoSection[] = [
       {
         href: "/demo/static-candlestick" as Href,
         title: "Static candlestick",
-        blurb: "Fixed OHLCV snapshot: candles, volume, and scrubbing without a live feed.",
+        blurb:
+          "Fixed OHLCV snapshot: candles, volume, and scrubbing without a live feed.",
       },
       {
         href: "/demo/empty-candles" as Href,
         title: "Chart gaps",
-        blurb: "Review semantic line/candle gaps and configurable bridge, band, and label styles against a live feed.",
+        blurb:
+          "Review semantic line/candle gaps and configurable bridge, band, and label styles against a live feed.",
       },
       {
         href: "/demo/multi-series",
         title: "Multi-series",
-        blurb: "LiveChartSeries: legend, dots, and Morfi-style scrub tooltip pills.",
+        blurb:
+          "LiveChartSeries: legend, dots, and Morfi-style scrub tooltip pills.",
       },
       {
         href: "/demo/sparklines",
         title: "Sparklines",
-        blurb: "Many static mini-charts in a list (no per-chart animation loop).",
+        blurb:
+          "Many static mini-charts in a list (no per-chart animation loop).",
       },
       {
         href: "/demo/coin-list",
         title: "Coin list",
-        blurb: "Hundreds of coins in a LegendList — recycled rows, each a static sparkline.",
+        blurb:
+          "Hundreds of coins in a LegendList — recycled rows, each a static sparkline.",
       },
     ],
   },
@@ -90,32 +96,38 @@ const SECTIONS: DemoSection[] = [
       {
         href: "/demo/scroll-interaction",
         title: "Scroll interaction",
-        blurb: "Vertical parent scrolling vs. horizontal scrub, for LiveChart and LiveChartSeries.",
+        blurb:
+          "Vertical parent scrolling vs. horizontal scrub, for LiveChart and LiveChartSeries.",
       },
       {
         href: "/demo/candle-scrub",
         title: "Candle scrub",
-        blurb: "Brokerage-style: OHLC header above the chart, time pinned to the top edge, crosshair kept.",
+        blurb:
+          "Brokerage-style: OHLC header above the chart, time pinned to the top edge, crosshair kept.",
       },
       {
         href: "/demo/order-ticket",
         title: "Order ticket",
-        blurb: "scrubAction: tap to drop a price, drag to adjust, press + to place a limit order.",
+        blurb:
+          "scrubAction: tap to drop a price, drag to adjust, press + to place a limit order.",
       },
       {
         href: "/demo/time-scroll",
         title: "Time scroll",
-        blurb: "timeScroll: one-finger drag to pan back through candle history; release at the live edge to resume.",
+        blurb:
+          "timeScroll: one-finger drag to pan back through candle history; release at the live edge to resume.",
       },
       {
         href: "/demo/y-range-scale" as Href,
         title: "Y-range scale",
-        blurb: "yRangeScale: drag the price gutter to stretch or compress the fitted Y-axis range.",
+        blurb:
+          "yRangeScale: drag the price gutter to stretch or compress the fitted Y-axis range.",
       },
       {
         href: "/demo/axis-auto-hide" as Href,
         title: "Axis auto-hide",
-        blurb: "axisAutoHide: fade X/Y axes while idle and restore them as you interact.",
+        blurb:
+          "axisAutoHide: fade X/Y axes while idle and restore them as you interact.",
       },
     ],
   },
@@ -141,7 +153,8 @@ const SECTIONS: DemoSection[] = [
       {
         href: "/demo/overlay-bridge",
         title: "Overlay bridge",
-        blurb: "renderOverlay: hand-rolled RN order overlay via the priceToY / yToPrice / timeToX bridge.",
+        blurb:
+          "renderOverlay: hand-rolled RN order overlay via the priceToY / yToPrice / timeToX bridge.",
       },
     ],
   },
@@ -156,12 +169,14 @@ const SECTIONS: DemoSection[] = [
       {
         href: "/demo/threshold",
         title: "Threshold split",
-        blurb: "threshold: green above / red below a live break-even — split stroke, P/L fill band, marker line.",
+        blurb:
+          "threshold: green above / red below a live break-even — split stroke, P/L fill band, marker line.",
       },
       {
         href: "/demo/segments",
         title: "Segments",
-        blurb: "segments: after-hours / overnight sessions — scrub-focus line recolor, divider + label.",
+        blurb:
+          "segments: after-hours / overnight sessions — scrub-focus line recolor, divider + label.",
       },
     ],
   },
@@ -176,7 +191,8 @@ const SECTIONS: DemoSection[] = [
       {
         href: "/demo/badge-styling",
         title: "Badge styling",
-        blurb: "BadgeConfig shape knobs: radius, background, border, text color, font, offset.",
+        blurb:
+          "BadgeConfig shape knobs: radius, background, border, text color, font, offset.",
       },
       {
         href: "/demo/axes-and-grid",
@@ -186,12 +202,14 @@ const SECTIONS: DemoSection[] = [
       {
         href: "/demo/extrema-labels",
         title: "Extrema labels",
-        blurb: 'topLabel / bottomLabel at the actual high / low point (position="extrema").',
+        blurb:
+          'topLabel / bottomLabel at the actual high / low point (position="extrema").',
       },
       {
         href: "/demo/android-surface-rendering",
         title: "Android surface rendering",
-        blurb: "Experimental TextureView vs opaque SurfaceView rendering and mask fallbacks.",
+        blurb:
+          "Experimental TextureView vs opaque SurfaceView rendering and mask fallbacks.",
       },
     ],
   },
@@ -237,11 +255,9 @@ const renderDemoItem = ({ item: d }: { item: Demo }) => (
   </Link>
 );
 
-const renderSectionHeader = ({
-  section,
-}: {
-  section: DemoSection;
-}) => <Text style={styles.sectionHeader}>{section.title}</Text>;
+const renderSectionHeader = ({ section }: { section: DemoSection }) => (
+  <Text style={styles.sectionHeader}>{section.title}</Text>
+);
 
 /** brandtnew labs — Lennart Brandt (Product Designer & React Native dev). */
 const SITE_URL = "https://www.brandtnewlabs.com";
@@ -278,7 +294,7 @@ export default function Index() {
   }
   return (
     <View style={[styles.root, { paddingTop: insets.top + 12 }]}>
-      <Text style={styles.title}>LiveChart demos</Text>
+      <Text style={styles.title}>LiveChart demos (TGFX)</Text>
       <Text style={styles.subtitle}>
         Grouped to match the docs. Open a screen to test one feature area.
       </Text>

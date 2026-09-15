@@ -1,2 +1,4 @@
 allowBuilds:
   unrs-resolver: true
+minimumReleaseAgeExclude:
+  - react-native-tgfx@0.0.2-alpha.12

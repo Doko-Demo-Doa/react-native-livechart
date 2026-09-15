@@ -5,13 +5,14 @@ import {
   Text as SkiaText,
   type SkFont,
 } from "../tgfx";
-import { useDerivedValue } from "react-native-reanimated";
+import { useDerivedValue, type SharedValue } from "react-native-reanimated";
 
 import type { ChartEngineLayout } from "../core/useLiveChartEngine";
 import type { ChartPadding } from "../draw/line";
 import { usePathBuilder } from "../hooks/usePathBuilder";
 import { useReferenceLineSeries } from "../hooks/useReferenceLineSeries";
 import { measureFontTextWidth } from "../lib/measureFontTextWidth";
+import { ambientOpacity } from "../math/opacity";
 import { thresholdDashPhase } from "../math/threshold";
 import type { LiveChartPalette, ReferenceLine } from "../types";
 
@@ -28,6 +29,7 @@ export function ReferenceLineSeriesOverlay({
   formatValue,
   font,
   badgeLayer,
+  groupOpacity,
 }: {
   engine: ChartEngineLayout;
   padding: ChartPadding;
@@ -36,6 +38,12 @@ export function ReferenceLineSeriesOverlay({
   formatValue: (value: number) => string;
   font: SkFont;
   badgeLayer: boolean;
+  /**
+   * Ambient opacity (e.g. the scrub fade), folded into the path/label's own
+   * alpha instead of an extra wrapping `<Group opacity>` — TGFX only supports
+   * one animated opacity per paint chain (see AnimatedLabel/XAxisOverlay).
+   */
+  groupOpacity?: SharedValue<number>;
 }) {
   const points = line.series ?? [];
   const extendToNow = line.extendToNow ?? true;
@@ -64,9 +72,10 @@ export function ReferenceLineSeriesOverlay({
     }
     return b.detach();
   });
-  const pathOpacity = useDerivedValue(() =>
-    geometry.visible.get() ? strokeOpacity : 0,
-  );
+  const pathOpacity = useDerivedValue(() => {
+    const base = geometry.visible.get() ? strokeOpacity : 0;
+    return base * ambientOpacity(groupOpacity);
+  });
   const dashPhase = useDerivedValue(() =>
     thresholdDashPhase(
       engine.timestamp.get(),
@@ -76,15 +85,17 @@ export function ReferenceLineSeriesOverlay({
       dashCycle,
     ),
   );
-  const plotClip = useDerivedValue(() => ({
-    x: padding.left,
-    y: padding.top,
-    width: Math.max(0, engine.canvasWidth.get() - padding.left - padding.right),
-    height: Math.max(
-      0,
-      engine.canvasHeight.get() - padding.top - padding.bottom,
-    ),
-  }));
+  // TGFX's `<Group clip>` wants a plain `{x,y,width,height}` object whose
+  // fields may individually be live — not a single SharedValue standing in
+  // for the whole object. Passing a SharedValue there reads `undefined` for
+  // every field (`sv.x`, not `sv.get().x`), which collapses the clip to a
+  // zero-size rect and hides everything drawn inside the Group.
+  const plotClipWidth = useDerivedValue(() =>
+    Math.max(0, engine.canvasWidth.get() - padding.left - padding.right),
+  );
+  const plotClipHeight = useDerivedValue(() =>
+    Math.max(0, engine.canvasHeight.get() - padding.top - padding.bottom),
+  );
 
   const metrics = font.getMetrics();
   const baselineOffset = (metrics.ascent + metrics.descent) / 2;
@@ -106,9 +117,10 @@ export function ReferenceLineSeriesOverlay({
   const labelY = useDerivedValue(
     () => geometry.currentY.get() - baselineOffset,
   );
-  const labelOpacity = useDerivedValue(() =>
-    geometry.currentVisible.get() ? 1 : 0,
-  );
+  const labelOpacity = useDerivedValue(() => {
+    const base = geometry.currentVisible.get() ? 1 : 0;
+    return base * ambientOpacity(groupOpacity);
+  });
 
   if (badgeLayer) {
     return (
@@ -125,7 +137,15 @@ export function ReferenceLineSeriesOverlay({
   }
 
   return (
-    <Group clip={plotClip} opacity={pathOpacity}>
+    <Group
+      clip={{
+        x: padding.left,
+        y: padding.top,
+        width: plotClipWidth,
+        height: plotClipHeight,
+      }}
+      opacity={pathOpacity}
+    >
       <Path
         path={path}
         style="stroke"
