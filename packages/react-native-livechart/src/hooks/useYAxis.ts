@@ -28,7 +28,8 @@ export function useYAxis(
   const yAxisEntries = useDerivedValue(() => {
     const dt = MS_PER_FRAME_60FPS;
 
-    const alphas = labelAlphas.get();
+    const previousAlphas = labelAlphas.get();
+    const alphas = { ...previousAlphas };
     const result = computeGridEntries(
       engine.displayMin.get(),
       engine.displayMax.get(),
@@ -46,7 +47,16 @@ export function useYAxis(
     );
 
     prevInterval.set(result.interval);
-    labelAlphas.set(alphas);
+    // Writing the SharedValue every frame — even to the same values — fans
+    // out a reactivity cascade to every derived value reading it. Only write
+    // back when something actually changed.
+    const alphaKeys = Object.keys(alphas);
+    let cacheChanged = alphaKeys.length !== Object.keys(previousAlphas).length;
+    for (let i = 0; !cacheChanged && i < alphaKeys.length; i++) {
+      const key = Number(alphaKeys[i]);
+      cacheChanged = alphas[key] !== previousAlphas[key];
+    }
+    if (cacheChanged) labelAlphas.set(alphas);
 
     return result.entries;
   });

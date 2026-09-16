@@ -110,7 +110,7 @@ export function useBadge(
     // the live value when not scrolled, so the live badge is unchanged.
     const liveVal =
       followViewEdge && edgeValue ? edgeValue.get() : engine.displayValue.get();
-    const dotY =
+    const valueY =
       valRange === 0
         ? padding.top + chartH / 2
         : padding.top + ((dMax - liveVal) / valRange) * chartH;
@@ -119,6 +119,12 @@ export function useBadge(
     const textW = measureFontTextWidth(font, text);
 
     const pillH = font.getSize() + badgeMetrics.padY * 2;
+    // Keeps the pill inside the plot without moving the live dot — a value
+    // near the top/bottom edge would otherwise draw the badge half off-canvas.
+    const dotY = Math.max(
+      padding.top + pillH / 2,
+      Math.min(padding.top + chartH - pillH / 2, valueY),
+    );
     // `midY` is the pill's vertical center (the tail anchors here); `capR` is the
     // corner radius — the capsule (midY) by default, or a clamped custom radius.
     const midY = pillH / 2;

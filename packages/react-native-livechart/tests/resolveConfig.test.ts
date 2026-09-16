@@ -724,6 +724,7 @@ describe("resolveScrub", () => {
     hideOverlaysOnScrub: false,
     clampToPlot: false,
     snapToCandles: false,
+    snapToMarkers: false,
   };
 
   it("returns null for undefined", () => {
@@ -842,6 +843,12 @@ describe("resolveScrub", () => {
     expect(resolveScrub(true)?.snapToCandles).toBe(false);
     expect(resolveScrub({})?.snapToCandles).toBe(false);
     expect(resolveScrub({ snapToCandles: true })?.snapToCandles).toBe(true);
+  });
+
+  it("defaults snapToMarkers to false and carries it when set", () => {
+    expect(resolveScrub(true)?.snapToMarkers).toBe(false);
+    expect(resolveScrub({})?.snapToMarkers).toBe(false);
+    expect(resolveScrub({ snapToMarkers: true })?.snapToMarkers).toBe(true);
   });
 
   it("carries a custom tooltipBorderRadius", () => {

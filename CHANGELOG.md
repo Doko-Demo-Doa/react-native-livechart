@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **External chart-chrome and Y-range control for `LiveChart`.** New optional
+  props: `nowOverrideValue` (a `SharedValue<number>` form of `nowOverride`,
+  driven from the UI thread), `omitTipBeyondData` (end the line at its last
+  real point instead of extending a flat tip), `axisAutoHideActive` /
+  `xAxisAutoHideOpacityOut` / `xAxisOffsetY` (drive and relocate the X-axis
+  auto-hide fade for an external bottom rail), `viewportResetKey` (reset pan
+  and zoom without flashing auto-hidden axes), and `yRangeOffset` /
+  `yRangeOverride` / `yRangePanEnabled` (pin or vertically pan the fitted Y
+  range from outside the chart). `scrub.snapToMarkers` snaps the crosshair to
+  a nearby marker timestamp, matching the existing `snapToCandles`.
+
+### Performance
+
+- `useYAxis` no longer writes its label-alpha cache back to its `SharedValue`
+  on frames where nothing actually changed, avoiding an unnecessary
+  reactivity cascade to every derived value reading it.
+
 ### Changed
 
 - **BREAKING:** the rendering backend is now `react-native-tgfx`

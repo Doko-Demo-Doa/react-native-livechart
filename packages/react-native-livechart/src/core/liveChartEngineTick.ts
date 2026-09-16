@@ -41,6 +41,8 @@ export interface EngineTickMutable {
   extremaMaxTime: number;
   /** Previous frame's yRangeScale — detects an in-flight scale drag. */
   lastYRangeScale?: number;
+  /** Previous frame's yRangeOffset — detects an in-flight vertical drag. */
+  lastYRangeOffset?: number;
 }
 
 export interface EngineTickInput {
@@ -70,6 +72,10 @@ export interface EngineTickInput {
   maxValue?: number;
   /** Positive, finite Y-range multiplier around the fitted midpoint (1 = auto-fit). */
   yRangeScale?: number;
+  /** Finite Y-range translation as a fraction of the fitted range. */
+  yRangeOffset?: number;
+  /** A fixed Y range, replacing the fitted one outright. */
+  yRangeOverride?: { min: number; max: number } | null;
   targetValue: number;
   points: LiveChartPoint[];
   /** Seconds since Unix epoch; defaults to `Date.now() / 1000` */
@@ -393,11 +399,29 @@ export function tickLiveChartEngineFrame(
       tMax += margin;
     }
 
+    // A caller-pinned range replaces the fit outright. For a series revealed
+    // left to right into a pre-sized window: the fit above only sees what has
+    // been drawn so far, and the settle below only snaps on expansion, so an
+    // unpinned reveal squashes its own curve as it grows. Everything
+    // downstream of the fit — the gesture scale and offset, the non-negative
+    // floor, the max clamp, and the easing — is bypassed: they exist to
+    // negotiate with a range that moves, and this one does not.
+    const yOverride = input.yRangeOverride;
+    const pinned =
+      yOverride != null &&
+      Number.isFinite(yOverride.min) &&
+      Number.isFinite(yOverride.max) &&
+      yOverride.min < yOverride.max;
+    if (pinned) {
+      tMin = yOverride.min;
+      tMax = yOverride.max;
+    }
+
     // Treat malformed gesture output as auto-fit. A zero/negative multiplier
     // collapses or inverts the range; a non-finite/overflowing one poisons every
     // downstream price-to-Y projection. Keep the guard here on the UI thread so
     // callers can write the SharedValue directly without a JS round-trip.
-    const requestedYScale = input.yRangeScale ?? 1;
+    const requestedYScale = pinned ? 1 : (input.yRangeScale ?? 1);
     let yScale =
       requestedYScale > 0 && Number.isFinite(requestedYScale)
         ? requestedYScale
@@ -424,22 +448,44 @@ export function tickLiveChartEngineFrame(
         yScale = 1;
       }
     }
-    // Snap only while the scale is actively moving, so the drag tracks the
-    // finger but a parked scale (and the reset back to 1) keeps the eased fit.
+    const requestedYOffset = pinned ? 0 : (input.yRangeOffset ?? 0);
+    const yOffset = Number.isFinite(requestedYOffset) ? requestedYOffset : 0;
+    if (yOffset !== 0) {
+      const offset = (tMax - tMin) * yOffset;
+      tMin += offset;
+      tMax += offset;
+    }
+
+    // Snap only while a manual Y adjustment is actively moving, so the drag
+    // tracks the finger but a parked adjustment keeps the eased fit.
     const yScaleDragging = yScale !== 1 && yScale !== state.lastYRangeScale;
+    const yOffsetDragging = yOffset !== 0 && yOffset !== state.lastYRangeOffset;
     state.lastYRangeScale = yScale;
+    state.lastYRangeOffset = yOffset;
 
-    if (input.nonNegative && tMin < 0) tMin = 0;
+    if (!pinned && input.nonNegative && yOffset === 0 && tMin < 0) tMin = 0;
     const maxV = input.maxValue;
-    if (maxV !== undefined && tMax > maxV) tMax = maxV;
+    if (!pinned && maxV !== undefined && tMax > maxV) tMax = maxV;
 
-    if (snap || yScaleDragging || tMin < state.displayMin) {
+    if (
+      pinned ||
+      snap ||
+      yScaleDragging ||
+      yOffsetDragging ||
+      tMin < state.displayMin
+    ) {
       state.displayMin = tMin;
     } else {
       state.displayMin = lerp(state.displayMin, tMin, speed, input.dt);
     }
 
-    if (snap || yScaleDragging || tMax > state.displayMax) {
+    if (
+      pinned ||
+      snap ||
+      yScaleDragging ||
+      yOffsetDragging ||
+      tMax > state.displayMax
+    ) {
       state.displayMax = tMax;
     } else {
       state.displayMax = lerp(state.displayMax, tMax, speed, input.dt);

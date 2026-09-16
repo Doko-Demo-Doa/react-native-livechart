@@ -73,6 +73,10 @@ export interface UsePanScrollOptions {
    * price indicator. Cleared when the finger lifts (the scrub pan's finalize).
    */
   scrubActive?: SharedValue<boolean>;
+  /** Enables vertical panning and stores the offset in fitted-range units. */
+  yRangeOffset?: SharedValue<number>;
+  /** True after the fitted Y range leaves auto mode. */
+  yRangePanEnabled?: SharedValue<boolean>;
   /**
    * Fraction of the visible window (0–1) the pan may travel past the data
    * bounds — into blank future space beyond the live edge and blank history
@@ -224,6 +228,8 @@ export function usePanScroll({
   onScrollStart,
   scrollActive,
   scrubActive,
+  yRangeOffset,
+  yRangePanEnabled,
   overscroll = 0,
   fling = true,
 }: UsePanScrollOptions): ReturnType<typeof Gesture.Pan> {
@@ -287,7 +293,7 @@ export function usePanScroll({
 
   const onChange =
     /* istanbul ignore next -- gesture worklet runs on the UI thread, not in Jest */
-    (e: { changeX: number }) => {
+    (e: { changeX: number; changeY: number }) => {
       "worklet";
       if (scrubActive?.get()) return;
       const win = displayWindow.get();
@@ -297,6 +303,10 @@ export function usePanScroll({
       const cur = viewEnd.get() ?? edge;
       const lo = panLowerBound(minTime.get(), win, edge, overscroll);
       viewEnd.set(nextViewEnd(cur, e.changeX, chartW, win, edge, lo, overscroll));
+      if (yRangeOffset && yRangePanEnabled?.get()) {
+        const chartH = canvasHeight.get() - padding.top - padding.bottom;
+        if (chartH > 0) yRangeOffset.set(yRangeOffset.get() + e.changeY / chartH);
+      }
     };
 
   const onEnd =
@@ -391,13 +401,47 @@ export function usePanScroll({
   // horizontal travel so a quick one-finger drag scrolls; a still press-hold
   // crosses no offset and falls through to the scrub gesture (which owns the
   // long-press). Vertical travel fails it so a parent vertical scroll wins.
-  return Gesture.Pan()
+  const gesture = Gesture.Pan()
     .enabled(enabled)
     .maxPointers(1)
-    .activeOffsetX([-AXIS_ACTIVATE_PX, AXIS_ACTIVATE_PX])
-    .failOffsetY([-HOLD_SCRUB_FAIL_Y_PX, HOLD_SCRUB_FAIL_Y_PX])
     .onStart(onStart)
     .onChange(onChange)
     .onEnd(onEnd)
     .onFinalize(onFinalize);
+  if (!yRangeOffset) {
+    return gesture
+      .activeOffsetX([-AXIS_ACTIVATE_PX, AXIS_ACTIVATE_PX])
+      .failOffsetY([-HOLD_SCRUB_FAIL_Y_PX, HOLD_SCRUB_FAIL_Y_PX]);
+  }
+  // With a Y range to pan, vertical travel must activate this gesture too
+  // (once `yRangePanEnabled`) instead of failing to a parent scroll.
+  return gesture
+    .manualActivation(true)
+    .onTouchesDown(
+      /* istanbul ignore next -- gesture worklet runs on the UI thread, not in Jest */
+      (e) => {
+        "worklet";
+        const t = e.changedTouches[0];
+        if (!t) return;
+        startX.set(t.x);
+        startY.set(t.y);
+      },
+    )
+    .onTouchesMove(
+      /* istanbul ignore next -- gesture worklet runs on the UI thread, not in Jest */
+      (e, manager) => {
+        "worklet";
+        const t = e.allTouches[0];
+        if (!t) return;
+        const dx = Math.abs(t.x - startX.get());
+        const dy = Math.abs(t.y - startY.get());
+        if (yRangePanEnabled?.get()) {
+          if (Math.max(dx, dy) > AXIS_ACTIVATE_PX) manager.activate();
+        } else if (dx > AXIS_ACTIVATE_PX && dx >= dy) {
+          manager.activate();
+        } else if (dy > AXIS_ACTIVATE_PX) {
+          manager.fail();
+        }
+      },
+    );
 }

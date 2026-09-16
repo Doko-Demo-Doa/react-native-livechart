@@ -239,6 +239,8 @@ export interface ResolvedScrubConfig {
   clampToPlot: boolean;
   /** Candle mode: quantize the scrub X to the hovered candle's center. */
   snapToCandles: boolean;
+  /** Quantize the scrub X to a nearby marker timestamp. */
+  snapToMarkers: boolean;
 }
 
 export interface ResolvedPerSeriesTooltipConfig {
@@ -937,6 +939,7 @@ const SCRUB_DEFAULTS: ResolvedScrubConfig = {
   hideOverlaysOnScrub: false,
   clampToPlot: false,
   snapToCandles: false,
+  snapToMarkers: false,
 };
 
 const PER_SERIES_TOOLTIP_DEFAULTS: ResolvedPerSeriesTooltipConfig = {

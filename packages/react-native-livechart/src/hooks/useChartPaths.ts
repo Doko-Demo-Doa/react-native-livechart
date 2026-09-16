@@ -62,6 +62,8 @@ export function useChartPaths(
   simplifyTolerance = 0,
   /** Explicit empty intervals that split line and fill geometry. */
   lineGaps: CandleGap[] = [],
+  /** End the line at its last real point even while following live. */
+  omitTipBeyondData = false,
 ) {
   const lineBuilder = usePathBuilder();
   const fillBuilder = usePathBuilder();
@@ -137,7 +139,12 @@ export function useChartPaths(
       // Only a live-following chart may extend the line to the right edge; a
       // parked (scrolled-back / overscrolled) window ends at its last real
       // point rather than fabricating a flat line into dataless space.
-      engine.viewEnd.get() != null,
+      //
+      // A chart whose `nowOverride` sits ahead of its data — a replay drawing
+      // into a window pinned to where the series will end — is following live
+      // by every test here, and fabricated exactly that flat line.
+      // `omitTipBeyondData` lets such a caller opt out.
+      engine.viewEnd.get() != null || omitTipBeyondData,
     );
     const chartWidth = canvasWidth - padding.left - padding.right;
     const absoluteXOffset =

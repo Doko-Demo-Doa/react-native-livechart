@@ -20,11 +20,10 @@ type GestureStateManager = {
 
 /**
  * A pending hold-to-scrub pan must stay within this radius of its touch-down
- * point to activate. Matches the platform long-press convention (RNGH
- * LongPress `maxDist` / UIKit `allowableMovement` default 10) with a little
- * slack for thumbs.
+ * point to activate. Matches the chart pan's direction threshold so both
+ * recognizers release a drag together.
  */
-export const HOLD_MAX_DRIFT_PX = 12;
+export const HOLD_MAX_DRIFT_PX = 6;
 
 /**
  * An activation earlier than `delayMs - slack` after the current touch went

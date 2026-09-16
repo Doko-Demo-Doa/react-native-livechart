@@ -1060,6 +1060,12 @@ export interface ScrubConfig {
    * candles keeps the raw finger X; no effect in line mode. Default `false`.
    */
   snapToCandles?: boolean;
+  /**
+   * Snap the crosshair to a marker timestamp when the finger is within 2% of
+   * the visible time window. The marker time then drives the line, tooltip, and
+   * trailing dim together. Default `false`.
+   */
+  snapToMarkers?: boolean;
 }
 
 /**
@@ -2542,6 +2548,41 @@ export interface LiveChartCoreProps {
 
 /** Props for the single-series `LiveChart` component. */
 export interface LiveChartProps extends LiveChartCoreProps {
+  /**
+   * `nowOverride` as a shared value, so a caller can slide the window from the
+   * UI thread without a render. Takes precedence over `nowOverride` when both
+   * are given.
+   */
+  nowOverrideValue?: SharedValue<number>;
+  /**
+   * End the line at its last real point instead of extending a flat tip to
+   * the right edge. For a chart whose `nowOverride` is ahead of its data (a
+   * replay drawing into a pre-sized window), where the built-in "am I
+   * parked?" test can't tell. No effect in candle mode.
+   */
+  omitTipBeyondData?: boolean;
+  /** Keeps auto-hidden axes visible during an external gesture. */
+  axisAutoHideActive?: SharedValue<boolean>;
+  /** Resets pan and zoom without showing auto-hidden axes. */
+  viewportResetKey?: string | number;
+  /** Exposes and drives X-axis opacity for external chart chrome. */
+  xAxisAutoHideOpacityOut?: SharedValue<number>;
+  /** Moves the X-axis into an external bottom rail. */
+  xAxisOffsetY?: number;
+  /** Moves the fitted Y range by a fraction of its height. */
+  yRangeOffset?: SharedValue<number>;
+  /**
+   * A fixed Y range for the whole run, overriding the fitted one.
+   *
+   * The engine fits its axis to what is visible, expanding at once and easing
+   * back, so a series revealed left to right squashes as it grows. Written as
+   * a shared value so it can be pinned once and read on the UI thread; `null`
+   * falls back to auto-fit. Applied after the fit and before `yRangeScale`,
+   * and assigned rather than eased — a fixed range has nothing to ease toward.
+   */
+  yRangeOverride?: SharedValue<{ min: number; max: number } | null>;
+  /** Unlocks vertical plot panning for a custom Y range. */
+  yRangePanEnabled?: SharedValue<boolean>;
   /** Area gradient fill under the line. `true` = defaults, or pass `GradientConfig`. Default `true`. */
   gradient?: boolean | GradientConfig;
   /**

@@ -22,6 +22,7 @@ import type {
   CandleGap,
   CandlePoint,
   LiveChartPalette,
+  Marker,
   ScrubActionPoint,
   ScrubPoint,
 } from "../types";
@@ -176,6 +177,8 @@ export function useCrosshair(
    * Default `false`.
    */
   snapToCandles = false,
+  /** Marker timestamps that magnetize the plain-scrub X when nearby. */
+  snapMarkers?: SharedValue<Marker[]>,
 ): CrosshairState {
   const scrubX = useSharedValue(-1);
   const scrubActive = useSharedValue(false);
@@ -631,6 +634,33 @@ export function useCrosshair(
     );
   };
 
+  /* istanbul ignore next -- worklet, called only from UI-thread gesture handlers */
+  const snapPlainX = (x: number): number => {
+    "worklet";
+    if (snapMarkers) {
+      const canvasWidth = engine.canvasWidth.get();
+      const windowSecs = engine.displayWindow.get();
+      const chartW = canvasWidth - padding.left - padding.right;
+      if (chartW > 0 && windowSecs > 0) {
+        const winStart = engine.timestamp.get() - windowSecs;
+        const time = winStart + ((x - padding.left) / chartW) * windowSecs;
+        let bestDist = windowSecs / 50;
+        let bestTime: number | null = null;
+        for (const marker of snapMarkers.get()) {
+          const dist = Math.abs(marker.time - time);
+          if (dist <= bestDist) {
+            bestDist = dist;
+            bestTime = marker.time;
+          }
+        }
+        if (bestTime !== null) {
+          return padding.left + ((bestTime - winStart) / windowSecs) * chartW;
+        }
+      }
+    }
+    return snapCandleX(x);
+  };
+
   let gesture = Gesture.Pan()
     .maxPointers(1)
     .shouldCancelWhenOutside(false)
@@ -730,7 +760,7 @@ export function useCrosshair(
         // guard needed. (Plain-scrub counterpart of the scrub-action tap defer.)
         if (deferTapHit !== undefined && deferTapHit(e.x, e.y)) return;
         startPlainScrub(
-          snapCandleX(e.x),
+          snapPlainX(e.x),
           padding,
           engine.canvasWidth.get(),
           clampPlainScrubToPlot,
@@ -765,7 +795,7 @@ export function useCrosshair(
           return;
         }
         updatePlainScrub(
-          snapCandleX(e.x),
+          snapPlainX(e.x),
           padding,
           engine.canvasWidth.get(),
           clampPlainScrubToPlot,

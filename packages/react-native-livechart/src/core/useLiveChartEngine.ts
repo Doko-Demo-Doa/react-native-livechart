@@ -61,7 +61,13 @@ export interface EngineConfig {
   maxValue?: number;
   /** Positive, finite live Y-range multiplier (1 = auto-fit); read each frame. */
   yRangeScale?: SharedValue<number>;
+  /** Finite live Y-range translation; read each frame. */
+  yRangeOffset?: SharedValue<number>;
+  /** A fixed Y range, overriding the fit. Null = auto-fit. */
+  yRangeOverride?: SharedValue<{ min: number; max: number } | null>;
   nowOverride?: number;
+  /** `nowOverride` as a shared value, driven from the UI thread. */
+  nowOverrideValue?: SharedValue<number>;
   windowBuffer?: number;
   paused?: boolean;
   /**
@@ -221,6 +227,8 @@ export interface EngineFrameRefs {
   nonNegativeSV?: SharedValue<boolean>;
   maxValueSV?: SharedValue<number | undefined>;
   yRangeScaleSV?: SharedValue<number>;
+  yRangeOffsetSV?: SharedValue<number>;
+  yRangeOverrideSV?: SharedValue<{ min: number; max: number } | null>;
   nowOverrideSV?: SharedValue<number | undefined>;
   windowBufferSV?: SharedValue<number>;
   pausedSV: SharedValue<boolean>;
@@ -357,6 +365,8 @@ export function applyLiveChartEngineFrame(
   input.nonNegative = sv.nonNegativeSV?.value ?? false;
   input.maxValue = sv.maxValueSV?.value;
   input.yRangeScale = sv.yRangeScaleSV?.value ?? 1;
+  input.yRangeOffset = sv.yRangeOffsetSV?.value ?? 0;
+  input.yRangeOverride = sv.yRangeOverrideSV?.value ?? undefined;
   input.nowOverride = sv.nowOverrideSV?.value;
   input.windowBuffer = sv.windowBufferSV?.value ?? 0;
   input.targetValue = sv.value.value;
@@ -455,7 +465,13 @@ export function useLiveChartEngine(
   );
   const nonNegativeSV = useDerivedValue(() => config.nonNegative ?? false);
   const maxValueSV = useDerivedValue(() => config.maxValue);
-  const nowOverrideSV = useDerivedValue(() => config.nowOverride);
+  // A caller that owns "now" on the UI thread — a replay sliding its window
+  // every frame — passes the shared value straight in, rather than
+  // re-rendering the chart to move a prop.
+  const nowOverrideProp = useDerivedValue(() => config.nowOverride);
+  const nowOverrideSV =
+    (config.nowOverrideValue as SharedValue<number | undefined> | undefined) ??
+    nowOverrideProp;
   const windowBufferSV = useDerivedValue(() => config.windowBuffer ?? 0);
   const pausedSV = useDerivedValue(() => config.paused ?? false);
   // Whether time-scroll is active. Drives the return-to-live reaction below
@@ -563,6 +579,8 @@ export function useLiveChartEngine(
     nonNegativeSV,
     maxValueSV,
     yRangeScaleSV: config.yRangeScale,
+    yRangeOffsetSV: config.yRangeOffset,
+    yRangeOverrideSV: config.yRangeOverride,
     nowOverrideSV,
     windowBufferSV,
     pausedSV,

@@ -452,6 +452,31 @@ paused. See [Time-scroll → Reset zoom from a button](/guides/time-scroll#reset
   See [Axis auto-hide](/guides/axis-auto-hide).
 </ParamField>
 
+<ParamField body="axisAutoHideActive" type="SharedValue<boolean>">
+  Keeps auto-hidden axes visible for as long as this reads `true` — for an
+  external gesture (e.g. a custom price-axis drag) the chart itself doesn't see.
+  **Experimental.**
+</ParamField>
+
+<ParamField body="xAxisAutoHideOpacityOut" type="SharedValue<number>">
+  Mirrors the X-axis's own auto-hide opacity into this shared value instead of
+  (or in addition to) animating the built-in axis, so external chart chrome
+  (e.g. a bottom rail hosting the axis outside the canvas) can fade in sync.
+  **Experimental.**
+</ParamField>
+
+<ParamField body="xAxisOffsetY" type="number" default="0">
+  Vertical offset (px) applied to the X-axis line, ticks, and labels — moves
+  them into an external bottom rail without affecting the plot padding.
+  **Experimental.**
+</ParamField>
+
+<ParamField body="viewportResetKey" type="string | number">
+  Resets any active pan/zoom (`timeScroll` / `zoom`) back to the live viewport
+  whenever this key changes, without flashing auto-hidden axes the way a plain
+  scroll-to-live would. **Experimental.**
+</ParamField>
+
 <ParamField body="topLabel" type="boolean | AxisLabelConfig" default="false">
   Edge label floated at the plot's **top**. `true` shows the built-in value
   label — the chart's current top Y-axis bound, formatted and updated each frame
@@ -552,12 +577,46 @@ paused. See [Time-scroll → Reset zoom from a button](/guides/time-scroll#reset
   [Manual Y-range scaling](/guides/y-range-scale).
 </ParamField>
 
+<ParamField body="yRangeOffset" type="SharedValue<number>">
+  Manual Y-range translation as a fraction of the fitted range's height — drive
+  it from a vertical drag to pan the price scale. Applied after the fit and
+  before `yRangeScale`. **Experimental.**
+</ParamField>
+
+<ParamField body="yRangeOverride" type="SharedValue<{ min: number; max: number } | null>">
+  A fixed Y range for the whole run, replacing the fitted one outright — `null`
+  falls back to auto-fit. The engine fits to what is visible and eases toward
+  it, which squashes a series revealed left-to-right into a pre-sized window;
+  a pinned range has nothing to ease toward. Assigned rather than eased, and
+  bypasses `yRangeScale` / `yRangeOffset` / `nonNegative` / `maxValue` while set.
+  **Experimental.**
+</ParamField>
+
+<ParamField body="yRangePanEnabled" type="SharedValue<boolean>">
+  Unlocks vertical panning of the plot (writing `yRangeOffset`) via the same
+  gesture that pans time horizontally. **Experimental.**
+</ParamField>
+
 <ParamField body="windowBuffer" type="number" default="0">
   Right-edge buffer as a fraction of `timeWindow`.
 </ParamField>
 
 <ParamField body="nowOverride" type="number">
   Override the engine's "now" (unix seconds) — useful for historical playback.
+</ParamField>
+
+<ParamField body="nowOverrideValue" type="SharedValue<number>">
+  `nowOverride` as a shared value, so a caller sliding "now" every frame (e.g.
+  a replay) can do so from the UI thread without re-rendering the chart. Takes
+  precedence over `nowOverride` when both are given. **Experimental.**
+</ParamField>
+
+<ParamField body="omitTipBeyondData" type="boolean" default="false">
+  End the line at its last real point instead of extending a flat tip to the
+  right edge. The built-in "is this chart following live?" test can't tell a
+  replay whose `nowOverride` is ahead of its data from a live chart; this opts
+  such a chart out of the flat extension. No effect in candle mode.
+  **Experimental.**
 </ParamField>
 
 ## Theming & layout

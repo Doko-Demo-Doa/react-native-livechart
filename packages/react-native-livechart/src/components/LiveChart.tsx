@@ -302,13 +302,19 @@ function useLiveChartController({
   // `static` is a reserved word — alias it so the destructure parses.
   static: isStatic = false,
   snapKey,
+  viewportResetKey,
   smoothing = 0.08,
   exaggerate = false,
   nonNegative = false,
   maxValue,
   yRangeScale,
+  yRangeOffset,
+  yRangeOverride,
+  yRangePanEnabled,
   windowBuffer = 0,
   nowOverride,
+  nowOverrideValue,
+  omitTipBeyondData,
   timeScroll = false,
   returnToLive,
   zoom = false,
@@ -322,6 +328,9 @@ function useLiveChartController({
   yAxis = true,
   xAxis = true,
   axisAutoHide = false,
+  axisAutoHideActive,
+  xAxisAutoHideOpacityOut,
+  xAxisOffsetY = 0,
   topLabel,
   bottomLabel,
   badge = true,
@@ -787,8 +796,11 @@ function useLiveChartController({
     nonNegative,
     maxValue,
     yRangeScale,
+    yRangeOffset,
+    yRangeOverride,
     windowBuffer,
     nowOverride,
+    nowOverrideValue,
     mode,
     candles: isCandle ? candlesEngine : candles,
     liveCandle: isCandle ? liveEngine : liveCandle,
@@ -799,6 +811,19 @@ function useLiveChartController({
     ),
     candleGapBridgeUnknown: Boolean(candleGapsCfg?.styles.unknown.bridge),
   });
+  // A new `viewportResetKey` clears pan/zoom without showing the auto-hidden
+  // axes (a plain scroll/zoom to live would normally flash them in).
+  const viewportResetting = useSharedValue(false);
+  const lastViewportResetKey = useRef(viewportResetKey);
+  useLayoutEffect(() => {
+    if (viewportResetKey === lastViewportResetKey.current) return;
+    lastViewportResetKey.current = viewportResetKey;
+    viewportResetting.set(true);
+    engine.viewEnd.set(null);
+    engine.viewWindow.set(null);
+    const id = requestAnimationFrame(() => viewportResetting.set(false));
+    return () => cancelAnimationFrame(id);
+  }, [engine.viewEnd, engine.viewWindow, viewportResetKey, viewportResetting]);
 
   // Mirror the UI-thread scroll state to React so the floating y-axis can keep
   // a right gutter at the live edge and collapse it only while scrolled back.
@@ -1023,6 +1048,7 @@ function useLiveChartController({
       : undefined,
     lineProp?.simplify,
     lineGapsCfg?.gaps,
+    omitTipBeyondData,
   );
 
   // Area-dots fill shader color as a vec4 (channels 0..1), with the config
@@ -1047,6 +1073,18 @@ function useLiveChartController({
     badgeCfg?.followViewEdge ?? false,
     dotCfg.trackWhileParked,
   );
+
+  // Keep the badge and value line inside the plot without moving the live dot.
+  const badgeHalfHeight = badgeFont.getSize() / 2 + metricsCfg.badge.padY;
+  const badgeCenterY = useDerivedValue(() => {
+    const height = engine.canvasHeight.get();
+    const y = dotY.get();
+    if (height === 0) return y;
+    return Math.max(
+      effectivePadding.top + badgeHalfHeight,
+      Math.min(height - effectivePadding.bottom - badgeHalfHeight, y),
+    );
+  });
 
   const momentumSV = useMomentum(engine, momentum);
   // A follow-edge badge must derive its color from the same historical point
@@ -1212,6 +1250,8 @@ function useLiveChartController({
     scrubCfg?.clampToPlot ?? false,
     // Candle mode: snap the crosshair to candle centers (tick-to-tick).
     scrubCfg?.snapToCandles ?? false,
+    // Pull the crosshair onto nearby marker timestamps.
+    scrubCfg?.snapToMarkers ? markersSV : undefined,
   );
 
   // Capture only the shared value in the worklets below. Referencing
@@ -1240,6 +1280,8 @@ function useLiveChartController({
     // Once a scrub is engaged the chart is locked: scrolling goes inert so the
     // finger only moves the price indicator across a fixed window.
     scrubActive: crosshairScrubActive,
+    yRangeOffset,
+    yRangePanEnabled,
     // Clear any live crosshair when a scroll drag takes over.
     onScrollStart: () => {
       "worklet";
@@ -1250,6 +1292,7 @@ function useLiveChartController({
   // Pinch-to-zoom the visible window (two-finger). Anchors at the focal point and
   // writes viewWindow + viewEnd; composes via Simultaneous (it's two-finger, so
   // disjoint from the one-finger pan/scrub). See `zoom`.
+  const zoomActive = useSharedValue(false);
   const pinchZoomGesture = usePinchZoom({
     engine,
     padding: effectivePadding,
@@ -1261,8 +1304,12 @@ function useLiveChartController({
     overscroll: timeScrollOverscroll,
     onZoomStart: () => {
       "worklet";
+      zoomActive.set(true);
       crosshairScrubActive.set(false);
     },
+  }).onFinalize(() => {
+    "worklet";
+    zoomActive.set(false);
   });
 
   // Axis auto-hide: fade both axes out at rest and back in while the user
@@ -1280,6 +1327,7 @@ function useLiveChartController({
   const axisAutoHideOpacity = useSharedValue(
     axisAutoHideCfg ? axisIdleOpacity : 1,
   );
+  const xAxisAutoHideOpacity = xAxisAutoHideOpacityOut ?? axisAutoHideOpacity;
   const axisAutoHideEnabled = axisAutoHideCfg !== null;
   const lastAxisAutoHide = useRef({
     enabled: axisAutoHideEnabled,
@@ -1302,20 +1350,44 @@ function useLiveChartController({
     cancelAnimation(axisAutoHideOpacity);
     axisAutoHideOpacity.value = axisAutoHideEnabled ? axisIdleOpacity : 1;
   }, [axisAutoHideEnabled, axisAutoHideOpacity, axisIdleOpacity]);
+  useEffect(() => {
+    if (!xAxisAutoHideOpacityOut) return;
+    cancelAnimation(xAxisAutoHideOpacityOut);
+    xAxisAutoHideOpacityOut.value = axisAutoHideEnabled ? axisIdleOpacity : 1;
+    return () => {
+      cancelAnimation(xAxisAutoHideOpacityOut);
+      xAxisAutoHideOpacityOut.value = axisIdleOpacity;
+    };
+  }, [axisAutoHideEnabled, xAxisAutoHideOpacityOut, axisIdleOpacity]);
   useAnimatedReaction(
     () => ({
-      gesture: scrollActive.value || crosshairScrubActive.value,
+      gesture:
+        scrollActive.value ||
+        crosshairScrubActive.value ||
+        zoomActive.value ||
+        (axisAutoHideActive?.value ?? false),
+      resetting: viewportResetting.value,
       viewEnd: engine.viewEnd.value,
       viewWindow: engine.viewWindow.value,
     }),
     (curr, prev) => {
       if (!axisAutoHideEnabled || prev === null) return;
+      if (curr.resetting) {
+        cancelAnimation(axisAutoHideOpacity);
+        if (xAxisAutoHideOpacityOut) cancelAnimation(xAxisAutoHideOpacityOut);
+        axisAutoHideOpacity.value = axisIdleOpacity;
+        if (xAxisAutoHideOpacityOut) {
+          xAxisAutoHideOpacityOut.value = axisIdleOpacity;
+        }
+        return;
+      }
       const moved =
         curr.gesture !== prev.gesture ||
         curr.viewEnd !== prev.viewEnd ||
         curr.viewWindow !== prev.viewWindow;
       if (!moved) return;
       cancelAnimation(axisAutoHideOpacity);
+      if (xAxisAutoHideOpacityOut) cancelAnimation(xAxisAutoHideOpacityOut);
       axisAutoHideOpacity.value = curr.gesture
         ? withTiming(1, { duration: axisFadeInMs })
         : // Movement without a held touch (gesture end, fling, pinch): show,
@@ -1327,6 +1399,16 @@ function useLiveChartController({
               withTiming(axisIdleOpacity, { duration: axisFadeOutMs }),
             ),
           );
+      if (xAxisAutoHideOpacityOut) {
+        xAxisAutoHideOpacityOut.value = curr.gesture
+          ? 1
+          : prev.gesture
+            ? withTiming(axisIdleOpacity, { duration: 120 })
+            : withSequence(
+                withTiming(1, { duration: axisFadeInMs }),
+                withDelay(150, withTiming(axisIdleOpacity, { duration: 150 })),
+              );
+      }
     },
     [
       axisAutoHideEnabled,
@@ -1334,6 +1416,9 @@ function useLiveChartController({
       axisFadeInMs,
       axisFadeOutMs,
       axisHideAfterMs,
+      axisAutoHideActive,
+      viewportResetting,
+      xAxisAutoHideOpacityOut,
     ],
   );
 
@@ -1564,6 +1649,8 @@ function useLiveChartController({
     engine,
     reveal,
     axisAutoHideOpacity,
+    xAxisAutoHideOpacity,
+    xAxisOffsetY,
     // loading shell styling (null → not loading)
     loadingLineColor: loadingCfg?.color,
     loadingStrokeWidth: loadingCfg?.strokeWidth,
@@ -1602,6 +1689,7 @@ function useLiveChartController({
     volumeDownColor: volumeCfg?.downColor ?? palette.candleDown,
     dotX,
     dotY,
+    badgeCenterY,
     liveDotOpacity,
     valueLineOpacity,
     liveBadgeOpacity,
@@ -1701,7 +1789,7 @@ function ChartYAxisLayer({
     effectivePadding,
     palette,
     skiaFont,
-    dotY,
+    badgeCenterY,
     badgeUsesRightGutter,
     badgeCfg,
     badgeFont,
@@ -1732,7 +1820,7 @@ function ChartYAxisLayer({
       badge={badgeUsesRightGutter}
       badgeTail={badgeCfg?.tail ?? true}
       badgeMetrics={metricsCfg.badge}
-      badgeCenterY={badgeUsesRightGutter ? dotY : undefined}
+      badgeCenterY={badgeUsesRightGutter ? badgeCenterY : undefined}
       badgeFontSize={badgeUsesRightGutter ? badgeFont.getSize() : undefined}
       badgeOffsetY={badgeCfg?.offsetY ?? 0}
       badgeOpacity={badgeUsesRightGutter ? liveBadgeOpacity : undefined}
@@ -1753,6 +1841,8 @@ function ChartXAxisLayer({ model }: { model: LiveChartModel }) {
     skiaFont,
     palette,
     volumeBandHeight,
+    xAxisAutoHideOpacity,
+    xAxisOffsetY,
   } = model;
   const { xAxisEntries } = useXAxis(
     engine,
@@ -1760,7 +1850,7 @@ function ChartXAxisLayer({ model }: { model: LiveChartModel }) {
     formatTime,
     skiaFont,
   );
-  return (
+  const overlay = (
     <XAxisOverlay
       entries={xAxisEntries}
       engine={engine}
@@ -1771,8 +1861,16 @@ function ChartXAxisLayer({ model }: { model: LiveChartModel }) {
       // Axis auto-hide fade (1 when the feature is off), folded into the axis
       // line/labels directly rather than an extra wrapping `<Group opacity>` —
       // see the comment in ChartYAxisLayer.
-      groupOpacity={model.axisAutoHideOpacity}
+      groupOpacity={xAxisAutoHideOpacity}
     />
+  );
+  // A transform-only Group carries no opacity, so wrapping for the external
+  // bottom-rail offset is safe here (unlike opacity, transforms don't hit
+  // TGFX's one-animated-opacity-per-chain limit).
+  return xAxisOffsetY !== 0 ? (
+    <Group transform={[{ translateY: xAxisOffsetY }]}>{overlay}</Group>
+  ) : (
+    overlay
   );
 }
 
@@ -2240,6 +2338,7 @@ function ChartStack({
     valueLineCfg,
     valueLineOpacity,
     dotY,
+    badgeCenterY,
     allRefLines,
     refLineKeys,
     dragValues,
@@ -2310,7 +2409,7 @@ function ChartStack({
       {valueLineCfg && (
         <Group opacity={valueLineOpacity}>
           <ValueLineOverlay
-            dotY={dotY}
+            dotY={badgeCenterY}
             engine={engine}
             padding={effectivePadding}
             strokeWidth={valueLineCfg.strokeWidth}
