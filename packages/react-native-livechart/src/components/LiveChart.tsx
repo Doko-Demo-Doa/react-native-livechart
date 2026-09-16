@@ -3132,10 +3132,12 @@ function ChartView({
         accessibilityLabel={accessibilityLabel}
         accessibilityRole={accessibilityRole}
       >
-        {/* Skia chooses TextureView vs SurfaceView when the native Canvas mounts. */}
+        {/* Texture composition keeps the canvas in the React Native hierarchy, so
+            the default transparent mode obeys parent clipping and transforms. */}
         <Canvas
           key={canvasMode}
           style={{ flex: 1 }}
+          composite={canvasMode === "transparent" ? "texture" : "layer"}
           opaque={canvasMode === "opaque"}
         >
           {canvasMode === "opaque" && (

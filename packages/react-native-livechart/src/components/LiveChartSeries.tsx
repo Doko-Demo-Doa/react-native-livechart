@@ -1132,10 +1132,12 @@ export const LiveChartSeries = forwardRef<
           else points map into a taller area and the x-axis draws past the edge. */}
       <GestureDetector gesture={rootGesture}>
         <View style={{ flex: 1 }} onLayout={onLayout}>
-          {/* Skia chooses TextureView vs SurfaceView when the native Canvas mounts. */}
+          {/* Texture composition keeps the canvas in the React Native hierarchy,
+              so the default transparent mode obeys parent clipping and transforms. */}
           <Canvas
             key={canvasMode}
             style={{ flex: 1, minHeight: layoutHeight || 1 }}
+            composite={canvasMode === "transparent" ? "texture" : "layer"}
             opaque={canvasMode === "opaque"}
           >
             {canvasMode === "opaque" && (
@@ -1281,7 +1283,7 @@ export const LiveChartSeries = forwardRef<
               pointerEvents="none"
               style={StyleSheet.absoluteFill}
             >
-              <Canvas style={StyleSheet.absoluteFill}>
+              <Canvas composite="texture" style={StyleSheet.absoluteFill}>
                 <SeriesTooltipLayer model={model} config={seriesTooltipCfg} />
               </Canvas>
             </View>
