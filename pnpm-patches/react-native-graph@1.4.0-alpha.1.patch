@@ -1,0 +1,53 @@
+diff --git a/src/backend/thor.ts b/src/backend/thor.ts
+index bbacbccae0f31b60f04391b3baac1066faeadb2a..24fd071fb00aa275c5a47f44ede7ca3b65816e91 100644
+--- a/src/backend/thor.ts
++++ b/src/backend/thor.ts
+@@ -168,6 +168,8 @@ export const Canvas: ComponentType<CanvasElementProps> = ({
+   children,
+ }) => {
+   const view = useSharedValue<ThorView | null>(null);
++  const [nativeView, setNativeView] = useState<ThorView | null>(null);
++  const [fallbackShapes, setFallbackShapes] = useState<ThorShape[]>(NO_SHAPES);
+   const [registry, setRegistry] = useState<Map<string, Shape>>(new Map());
+ 
+   const context = useMemo<Registry>(
+@@ -199,9 +201,29 @@ export const Canvas: ComponentType<CanvasElementProps> = ({
++  // Feed a regular React scene as well. It is the supported initial-render
++  // path for ThorCanvasNative and remains available when a Nitro callback is
++  // not delivered to the adapter (the imperative bridge below still owns
++  // Reanimated-driven updates).
++  useLayoutEffect(() => {
++    setFallbackShapes(shapes.map(resolve));
++  }, [shapes]);
++
+   const onRef = useCallback(
+     (ref: ThorView) => {
+       view.value = ref;
++      setNativeView(ref);
+     },
+     [view]
+   );
++  const hybridRef = useMemo(() => nitro!.callback(onRef), [onRef]);
++
++  // `useAnimatedReaction` only observes shared-value changes. A static scene
++  // can finish registering after the native ref arrives, leaving Thor's raw
++  // canvas with its initial empty `shapes` prop. Submit that first scene from
++  // React as soon as both sides are ready; the reaction above drives later
++  // worklet updates and animations.
++  useLayoutEffect(() => {
++    if (nativeView == null || shapes.length === 0) return;
++    nativeView.drawShapes(shapes.map(resolve));
++  }, [nativeView, shapes]);
+ 
+   return createElement(
+     RegistryContext.Provider,
+@@ -210,7 +231,7 @@ export const Canvas: ComponentType<CanvasElementProps> = ({
+       style,
+       backend: thorBackend(),
+-      shapes: NO_SHAPES,
++      shapes: fallbackShapes,
+-      hybridRef: nitro!.callback(onRef),
++      hybridRef,
+     }),
+     children
+   );

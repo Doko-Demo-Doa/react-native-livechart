@@ -26,6 +26,7 @@ const rendererProfileCacheKey = [
   process.env.EXPO_PUBLIC_THRESHOLD_SHADER_PROFILE_MODE ?? "default",
   process.env.EXPO_PUBLIC_THRESHOLD_SHADER_PROFILE_LABEL ?? "default",
   process.env.EXPO_PUBLIC_THRESHOLD_SHADER_PROFILE_LAYERS ?? "default",
+  process.env.EXPO_PUBLIC_RN_GRAPH_BACKEND ?? "skia",
   bundleMode ? "worklets-bundle" : "worklets-legacy",
 ].join(":");
 

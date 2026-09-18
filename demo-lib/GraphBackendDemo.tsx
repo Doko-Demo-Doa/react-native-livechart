@@ -1,21 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import {
-  GRAPH_BACKEND,
-  LineGraph,
-  type GraphPoint,
-} from "react-native-graph";
+import { GRAPH_BACKEND, LineGraph, type GraphPoint } from "react-native-graph";
 
 import { DemoScreen } from "./DemoScreen";
 import { APP_FONT_FAMILY, APP_FONT_FAMILY_MEDIUM } from "./fonts";
 import { colors } from "./theme";
 
-type GraphBackend = "skia" | "tgfx" | "thor";
-
 const START_TIME = Date.UTC(2025, 5, 13, 9, 30);
 const POINT_INTERVAL_MS = 5 * 60 * 1_000;
 
-/** Fixed, renderer-agnostic price history shared by all three backend demos. */
+/** Fixed renderer-agnostic price history shared by the static and live demos. */
 const GRAPH_POINTS: GraphPoint[] = Array.from({ length: 72 }, (_, index) => {
   const trend = index * 0.19;
   const wave = Math.sin(index * 0.42) * 3.6 + Math.cos(index * 0.16) * 1.4;
@@ -28,43 +22,76 @@ const GRAPH_POINTS: GraphPoint[] = Array.from({ length: 72 }, (_, index) => {
 
 const formatPrice = (value: number) => `$${value.toFixed(2)}`;
 
-const BACKEND_DETAIL: Record<GraphBackend, string> = {
-  skia: "Skia canvas — the default renderer.",
-  tgfx: "Tencent tGFX GPU canvas.",
-  thor: "ThorVG canvas running from the UI thread.",
-};
+type GraphDemoMode = "static" | "dynamic";
 
-export function GraphBackendDemo({ backend }: { backend: GraphBackend }) {
+function nextPoint(points: GraphPoint[]): GraphPoint {
+  const lastPoint = points[points.length - 1]!;
+  const index =
+    Math.round((lastPoint.date.getTime() - START_TIME) / POINT_INTERVAL_MS) + 1;
+  const trend = index * 0.19;
+  const wave = Math.sin(index * 0.42) * 3.6 + Math.cos(index * 0.16) * 1.4;
+  const dip = index > 35 && index < 49 ? -(49 - index) * 0.25 : 0;
+
+  return {
+    date: new Date(lastPoint.date.getTime() + POINT_INTERVAL_MS),
+    value: Number((146.8 + trend + wave + dip).toFixed(2)),
+  };
+}
+
+export function GraphBackendDemo({ mode }: { mode: GraphDemoMode }) {
   const [selectedPoint, setSelectedPoint] = useState<GraphPoint | null>(null);
-  const resolvedBackend = GRAPH_BACKEND as GraphBackend;
-  const resolved = resolvedBackend === backend;
+  const [points, setPoints] = useState(GRAPH_POINTS);
+  const isDynamic = mode === "dynamic";
+
+  useEffect(() => {
+    if (!isDynamic) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setPoints((currentPoints) => [
+        ...currentPoints.slice(1),
+        nextPoint(currentPoints),
+      ]);
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, [isDynamic]);
 
   return (
     <DemoScreen
-      title={`react-native-graph · ${backend}`}
-      description={`The same 72-point price chart and LineGraph props rendered with ${backend}. ${BACKEND_DETAIL[backend]}`}
+      title={`react-native-graph · ${isDynamic ? "live" : "static"}`}
+      description={
+        isDynamic
+          ? "The same 72-point price chart, with one synthetic price arriving every three seconds."
+          : "A fixed 72-point price chart using react-native-graph's LineGraph."
+      }
       chart={
         <View style={styles.card}>
           <View style={styles.statusRow}>
             <Text style={styles.statusLabel}>BUILD BACKEND</Text>
-            <Text style={[styles.statusValue, !resolved && styles.statusWarning]}>
-              {resolvedBackend.toUpperCase()}
+            <Text style={styles.statusValue}>
+              {GRAPH_BACKEND.toUpperCase()}
             </Text>
           </View>
           <LineGraph
             animated
             color="#3323E6"
             enableIndicator
-            indicatorPulsating
+            indicatorPulsating={false}
             enablePanGesture
             gradientFillColors={["rgba(51,35,230,0.28)", "rgba(51,35,230,0)"]}
             lineThickness={4}
             onPointSelected={setSelectedPoint}
             panGestureDelay={0}
-            points={GRAPH_POINTS}
+            points={points}
             style={styles.graph}
           />
-          <Text style={styles.hint}>Press and drag to inspect the same data.</Text>
+          <Text style={styles.hint}>
+            {isDynamic
+              ? "A new price arrives every 3 seconds. Press and drag to inspect it."
+              : "Press and drag to inspect the fixed data."}
+          </Text>
         </View>
       }
     >
@@ -74,13 +101,12 @@ export function GraphBackendDemo({ backend }: { backend: GraphBackend }) {
               hour: "2-digit",
               minute: "2-digit",
             })}  ${formatPrice(selectedPoint.value)}`
-          : `Latest  ${formatPrice(GRAPH_POINTS[GRAPH_POINTS.length - 1]!.value)}`}
+          : `Latest  ${formatPrice(points[points.length - 1]!.value)}`}
       </Text>
-      {!resolved ? (
-        <Text style={styles.note}>
-          This route is shared across builds. Start the app with the {backend} script to render it through {backend}; this build resolved {resolvedBackend}.
-        </Text>
-      ) : null}
+      <Text style={styles.note}>
+        The renderer is selected for the whole build. Use a graph backend script
+        to run this same screen with Skia, tGFX, or Thor.
+      </Text>
     </DemoScreen>
   );
 }
@@ -111,9 +137,6 @@ const styles = StyleSheet.create({
     fontFamily: APP_FONT_FAMILY_MEDIUM,
     fontSize: 11,
     letterSpacing: 0.7,
-  },
-  statusWarning: {
-    color: "#B45309",
   },
   graph: {
     flex: 1,

@@ -1,5 +1,13 @@
 allowBuilds:
-  '@shopify/react-native-skia': true
+  "@shopify/react-native-skia": true
   unrs-resolver: true
+minimumReleaseAgeExclude:
+  - react-native-nitro-thor@0.0.2-alpha.3
+  - '@expo/cli@57.0.25'
+  - '@expo/router-server@57.0.10'
+  - babel-preset-expo@57.0.12
+  - expo@57.0.23
+  - expo-build-properties@57.0.19
 patchedDependencies:
-  react-native-nitro-thor@0.0.2-alpha.2: patches/react-native-nitro-thor@0.0.2-alpha.2.patch
+  react-native-graph@1.4.0-alpha.1: pnpm-patches/react-native-graph@1.4.0-alpha.1.patch
+  react-native-tgfx@0.0.2-alpha.12: pnpm-patches/react-native-tgfx@0.0.2-alpha.12.patch

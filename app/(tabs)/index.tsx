@@ -35,22 +35,17 @@ const SECTIONS: DemoSection[] = [
     ],
   },
   {
-    title: "Renderer backends",
+    title: "react-native-graph",
     data: [
       {
-        href: "/demo/graph-backend-skia" as Href,
-        title: "react-native-graph · Skia",
-        blurb: "Shared 72-point line chart through the default Skia canvas.",
+        href: "/demo/graph-static" as Href,
+        title: "Static line chart",
+        blurb: "A fixed 72-point price chart; the active renderer is shown in the demo.",
       },
       {
-        href: "/demo/graph-backend-tgfx" as Href,
-        title: "react-native-graph · tGFX",
-        blurb: "The same line chart through Tencent's tGFX GPU canvas.",
-      },
-      {
-        href: "/demo/graph-backend-thor" as Href,
-        title: "react-native-graph · Thor",
-        blurb: "The same line chart through ThorVG's UI-thread canvas.",
+        href: "/demo/graph-dynamic" as Href,
+        title: "Live line chart",
+        blurb: "The same chart with a new synthetic price every three seconds.",
       },
     ],
   },
