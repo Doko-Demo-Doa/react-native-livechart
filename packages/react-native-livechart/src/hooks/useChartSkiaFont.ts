@@ -1,4 +1,5 @@
 import type { SkFont } from "../tgfx";
+import { useMemo } from "react";
 import { resolveFontConfig } from "../core/resolveConfig";
 import type { FontConfig } from "../types";
 
@@ -21,7 +22,7 @@ export function useChartSkiaFont(
   // `this` is no longer the original `font` object, so `this.fontSize` reads
   // `undefined` and every layout computation (grid/axis label positions)
   // silently comes out `NaN`. A closure has no such receiver to lose.
-  return {
+  return useMemo(() => ({
     fontFamily,
     fontSize,
     fontWeight,
@@ -48,5 +49,5 @@ export function useChartSkiaFont(
         leading: 0,
       };
     },
-  };
+  }), [fontFamily, fontSize, fontWeight]);
 }

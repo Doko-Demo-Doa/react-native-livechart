@@ -13,6 +13,7 @@ import type {
   ChartGap,
   ChartGapsConfig,
   LiveChartHandle,
+  LiveChartFrameStats,
   LiveChartPoint,
   ReferenceLine,
   SeriesConfig,
@@ -94,6 +95,24 @@ While it is below `1`, live dots and pulse rings fade completely out so a dimmed
 stroke cannot show through them; they return once the multiplier reaches `1`.
 See [Line & area](/guides/line-and-area#dimming-replacement-data) or
 [Multi-series](/guides/multi-series#dimming-replacement-data).
+
+The experimental frame-loop controls are available on `LiveChart`:
+
+```ts
+interface LiveChartFrameStats {
+  frames: number;    // active engine callbacks
+  published: number; // callbacks that changed a tracked engine value
+  skipped: number;   // callbacks whose tracked engine values were unchanged
+}
+
+interface LiveChartProps {
+  isFrameLoopActive?: SharedValue<boolean>;
+  debugFrameStats?: SharedValue<LiveChartFrameStats>;
+}
+```
+
+See [Scroll interaction](/guides/scroll-interaction) for the parent-scroll gate
+and the counter's measurement limits.
 
 ## Momentum
 
@@ -181,6 +200,7 @@ interface ReferenceLine {
   value?: number;
   // Form B — time-varying line (sorted unix-second points):
   series?: LiveChartPoint[];
+  extendToStart?: boolean;       // flat-extend the first value left; default true
   extendToNow?: boolean;         // flat-extend the last value to live; default true
   // Form C — horizontal band:
   valueFrom?: number;
@@ -388,6 +408,7 @@ interface ThresholdConfig {
   belowColor?: string;        // stroke below value;    default palette down-red
   fill?: boolean | { opacity?: number }; // line↔threshold P/L band; default off, opacity 0.16
   includeInRange?: boolean;   // fold the threshold into the Y-range fit (like reference lines); default false
+  extendToStart?: boolean;    // series: extend first value flat to the window start; default true
   extendToNow?: boolean;      // series: extend flat past the last point to "now"; default true
   line?: boolean | ThresholdLineConfig; // marker line at value; default off
 }
@@ -511,6 +532,8 @@ interface SelectionDotConfig {
 }
 interface GridStyleConfig { color?: string; strokeWidth?: number; intervals?: number[]; opacity?: number }
 interface YAxisConfig {
+  // Label side; reserve left label width with insets.left. Default "right".
+  side?: "left" | "right";
   minGap?: number; // min px gap between grid lines; default 36
   // Multiplier used to choose dynamic nice intervals without changing plotted
   // values. Pair with formatValue using the same multiplier. Must be positive
@@ -643,16 +666,16 @@ interface FontConfig {
   fontFamily?: string;      // default "Menlo"
   fontSize?: number;        // default 11
   fontWeight?: FontWeight;
-  /** @deprecated Ignored by the TGFX renderer. */
+  /** Font asset, URI, or base64 source registered under fontFamily by TGFX. */
   typeface?: DataSourceParam;
   /** @deprecated Ignored by the TGFX renderer. */
   fontManager?: SkFontMgr | null;
 }
 ```
 
-TGFX uses native font-family resolution. Use a platform-registered `fontFamily`;
-the legacy `typeface` and `fontManager` fields are retained only for source
-compatibility and are ignored.
+TGFX uses native font-family resolution. `typeface` registers a font source
+under `fontFamily` on the chart canvas. `fontManager` remains accepted for source
+compatibility but is ignored.
 
 ## Imperative handle
 

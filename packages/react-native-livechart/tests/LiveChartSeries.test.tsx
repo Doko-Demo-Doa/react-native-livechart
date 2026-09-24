@@ -13,6 +13,19 @@ import type {
 import { getAllByHostType } from "./rntl14";
 
 describe("LiveChartSeries", () => {
+  it("registers a custom font source on its canvas", async () => {
+    function H() {
+      const series = useSharedValue<SeriesConfig[]>([
+        { id: "a", label: "A", data: [{ time: 1_700_000_000, value: 10 }], value: 10, color: "#3b82f6" },
+      ]);
+      return <LiveChartSeries series={series} font={{ fontFamily: "ChartFont", typeface: 42 }} />;
+    }
+    const screen = await render(<H />);
+    expect(getAllByHostType(screen, View).some(
+      (view) => view.props.fonts?.ChartFont?.[0] === 42,
+    )).toBe(true);
+  });
+
   it("exposes an imperative pinch-zoom reset", async () => {
     const ref = React.createRef<LiveChartHandle>();
     function H() {

@@ -287,6 +287,10 @@ describe("resolveBadge", () => {
 // ─── resolveYAxis ──────────────────────────────────────────────────────────────
 
 describe("resolveYAxis", () => {
+  it("accepts left label placement", () => {
+    expect(resolveYAxis({ side: "left" })?.side).toBe("left");
+  });
+
   it("returns null for undefined", () => {
     expect(resolveYAxis(undefined)).toBeNull();
   });
@@ -297,6 +301,7 @@ describe("resolveYAxis", () => {
 
   it("returns defaults for true", () => {
     expect(resolveYAxis(true)).toEqual({
+      side: "right",
       minGap: 36,
       intervalScale: 1,
       count: 0,
@@ -308,6 +313,7 @@ describe("resolveYAxis", () => {
 
   it("merges partial config with defaults", () => {
     expect(resolveYAxis({ minGap: 48 })).toEqual({
+      side: "right",
       minGap: 48,
       intervalScale: 1,
       count: 0,
@@ -319,6 +325,7 @@ describe("resolveYAxis", () => {
 
   it("carries through the float flag", () => {
     expect(resolveYAxis({ float: true })).toEqual({
+      side: "right",
       minGap: 36,
       intervalScale: 1,
       count: 0,
@@ -330,6 +337,7 @@ describe("resolveYAxis", () => {
 
   it("carries through a fixed count", () => {
     expect(resolveYAxis({ count: 5 })).toEqual({
+      side: "right",
       minGap: 36,
       intervalScale: 1,
       count: 5,
@@ -341,6 +349,7 @@ describe("resolveYAxis", () => {
 
   it("carries through right-anchored label spacing", () => {
     expect(resolveYAxis({ labelRightMargin: 8, gridEndGap: 6 })).toEqual({
+      side: "right",
       minGap: 36,
       intervalScale: 1,
       count: 0,
@@ -1937,6 +1946,7 @@ describe("resolveThreshold", () => {
       fill: false,
       fillOpacity: 0.16,
       includeInRange: false,
+      extendToStart: true,
       extendToNow: true,
       line: null,
     });
@@ -1960,6 +1970,7 @@ describe("resolveThreshold", () => {
       fill: true,
       fillOpacity: 0.16,
       includeInRange: false,
+      extendToStart: true,
       extendToNow: true,
       line: null,
     });
@@ -1975,7 +1986,7 @@ describe("resolveThreshold", () => {
     expect(r?.fillOpacity).toBe(0.3);
   });
 
-  it("passes through series / includeInRange / extendToNow", () => {
+  it("passes through series / includeInRange / endpoint extension", () => {
     const series = {
       sentinel: "sv-series",
     } as unknown as import("react-native-reanimated").SharedValue<
@@ -1984,11 +1995,13 @@ describe("resolveThreshold", () => {
     const r = resolveThreshold({
       series,
       includeInRange: true,
+      extendToStart: false,
       extendToNow: false,
     });
     expect(r?.series).toBe(series);
     expect(r?.value).toBeUndefined();
     expect(r?.includeInRange).toBe(true);
+    expect(r?.extendToStart).toBe(false);
     expect(r?.extendToNow).toBe(false);
   });
 

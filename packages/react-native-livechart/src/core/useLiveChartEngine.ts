@@ -5,7 +5,7 @@
  *
  * @see https://github.com/benjitaylor/liveline
  */
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   cancelAnimation,
   Easing,
@@ -20,6 +20,7 @@ import { MS_PER_FRAME_60FPS, RETURN_TO_LIVE_MS } from "../constants";
 import type {
   CandleGap,
   CandlePoint,
+  LiveChartFrameStats,
   LiveChartPoint,
   SeriesConfig,
 } from "../types";
@@ -54,6 +55,9 @@ export interface EngineConfig {
    * `LiveChartPoint[]` form.
    */
   thresholdRangePoints?: SharedValue<LiveChartPoint[]> | LiveChartPoint[];
+  /** With {@link thresholdRangePoints}: whether the series extends flat before
+   *  its first point to the visible window start. Default `true`. */
+  thresholdRangeExtendToStart?: boolean;
   /** With {@link thresholdRangePoints}: whether the series extends flat past its
    *  last point to "now" (`threshold.extendToNow`). Default `true`. */
   thresholdRangeExtendToNow?: boolean;
@@ -96,6 +100,10 @@ export interface EngineConfig {
    * {@link LiveChartProps.static}.
    */
   static?: boolean;
+  /** Runtime gate for the frame loop. Gestures and configuration stay mounted. */
+  isFrameLoopActive?: SharedValue<boolean>;
+  /** Optional development-only frame publication counters. */
+  debugFrameStats?: SharedValue<LiveChartFrameStats>;
   /**
    * Opaque key that snaps the framing to its target in one frame whenever it
    * changes (the next tick bypasses `smoothing` for the window, Y-range, and
@@ -223,6 +231,7 @@ export interface EngineFrameRefs {
   referenceValues?: SharedValue<number[] | undefined>;
   /** Series threshold folded into the range fit (`threshold.includeInRange`). */
   thresholdRangePoints?: SharedValue<LiveChartPoint[] | undefined>;
+  thresholdRangeExtendToStart?: SharedValue<boolean>;
   thresholdRangeExtendToNow?: SharedValue<boolean>;
   nonNegativeSV?: SharedValue<boolean>;
   maxValueSV?: SharedValue<number | undefined>;
@@ -286,6 +295,8 @@ export function makeEngineFrameScratch(): EngineFrameScratch {
       extremaMaxValue: NaN,
       extremaMinTime: NaN,
       extremaMaxTime: NaN,
+      lastCanvasWidth: undefined,
+      lastCanvasHeight: undefined,
     },
     input: {
       dt: MS_PER_FRAME_60FPS,
@@ -327,6 +338,8 @@ export function applyLiveChartEngineFrame(
     extremaMaxValue: NaN,
     extremaMinTime: NaN,
     extremaMaxTime: NaN,
+    lastCanvasWidth: undefined,
+    lastCanvasHeight: undefined,
   };
   state.displayValue = sv.displayValue.value;
   state.displayMin = sv.displayMin.value;
@@ -361,6 +374,8 @@ export function applyLiveChartEngineFrame(
   input.referenceValue = sv.referenceValue.value;
   input.referenceValues = sv.referenceValues?.value;
   input.thresholdRangePoints = sv.thresholdRangePoints?.value;
+  input.thresholdRangeExtendToStart =
+    sv.thresholdRangeExtendToStart?.value ?? true;
   input.thresholdRangeExtendToNow = sv.thresholdRangeExtendToNow?.value ?? true;
   input.nonNegative = sv.nonNegativeSV?.value ?? false;
   input.maxValue = sv.maxValueSV?.value;
@@ -412,6 +427,43 @@ export function applyLiveChartEngineFrame(
 export function useLiveChartEngine(
   config: EngineConfig,
 ): SingleEngineState & ChartEngineScroll & ChartEngineEdge {
+  const {
+    data,
+    value,
+    timeWindow: configuredTimeWindow,
+    smoothing: configuredSmoothing,
+    adaptiveSpeedBoost,
+    exaggerate,
+    referenceValue: configuredReferenceValue,
+    referenceValues: configuredReferenceValues,
+    liveReferenceValues,
+    thresholdRangePoints: configuredThresholdRangePoints,
+    thresholdRangeExtendToNow: configuredThresholdRangeExtendToNow,
+    thresholdRangeExtendToStart: configuredThresholdRangeExtendToStart,
+    nonNegative,
+    maxValue,
+    yRangeScale,
+    yRangeOffset,
+    yRangeOverride,
+    nowOverride,
+    nowOverrideValue,
+    windowBuffer,
+    paused,
+    scrollEnabled,
+    allowFutureViewEnd,
+    returnToLiveMs,
+    static: isStatic,
+    isFrameLoopActive,
+    debugFrameStats,
+    snapKey,
+    mode,
+    candles,
+    liveCandle,
+    candleGaps,
+    candleGapBridgeNoTrades,
+    candleGapBridgeUnavailable,
+    candleGapBridgeUnknown,
+  } = config;
   // Pinch-zoom window-width override (null = follow the configured window).
   // Declared first so `timeWindow` below can fold it in. Defaults to null so
   // charts without `zoom` behave exactly as before.
@@ -422,26 +474,28 @@ export function useLiveChartEngine(
   // the new prop forever, and prop-driven window changes would silently no-op.
   useEffect(() => {
     viewWindow.set(null);
-  }, [config.timeWindow, viewWindow]);
+  }, [configuredTimeWindow, viewWindow]);
 
   // Low-frequency config → UI thread via useDerivedValue. `timeWindow` is the
   // *effective* target window: the zoom override when set, else the prop. Both
   // the tick's window lerp and the X-axis tick selection read it, so zoom flows
   // downstream for free (mirrors how viewEnd drives `timestamp`).
-  const timeWindow = useDerivedValue(() => viewWindow.value ?? config.timeWindow);
+  const timeWindow = useDerivedValue(
+    () => viewWindow.value ?? configuredTimeWindow,
+  );
   // Static charts snap to their target in one tick (smoothing=1), so the single
   // settle reaction below produces the final state with no per-frame easing.
   const smoothing = useDerivedValue(() =>
-    config.static ? 1 : config.smoothing,
+    isStatic ? 1 : configuredSmoothing,
   );
-  const adaptiveSpeedBoostSV = useDerivedValue(() => config.adaptiveSpeedBoost);
-  const exaggerateSV = useDerivedValue(() => config.exaggerate ?? false);
-  const referenceValue = useDerivedValue(() => config.referenceValue);
+  const adaptiveSpeedBoostSV = useDerivedValue(() => adaptiveSpeedBoost);
+  const exaggerateSV = useDerivedValue(() => exaggerate ?? false);
+  const referenceValue = useDerivedValue(() => configuredReferenceValue);
   // Captured directly (not via `config.`) so Reanimated tracks the SharedValue and
   // the merge re-runs each frame while a line is dragged; stable when idle.
-  const liveReferenceValuesSV = config.liveReferenceValues;
+  const liveReferenceValuesSV = liveReferenceValues;
   const referenceValues = useDerivedValue(() => {
-    const base = config.referenceValues;
+    const base = configuredReferenceValues;
     const live = liveReferenceValuesSV?.value;
     if (!live || live.length === 0) return base;
     return base && base.length > 0 ? base.concat(live) : live;
@@ -450,59 +504,62 @@ export function useLiveChartEngine(
   // directly (not via `config.`) like `liveReferenceValues`, so the live
   // `threshold.series` SharedValue is tracked and the tick sees fresh points.
   const thresholdRangeSourceSV =
-    config.thresholdRangePoints !== undefined &&
-    !Array.isArray(config.thresholdRangePoints)
-      ? config.thresholdRangePoints
+    configuredThresholdRangePoints !== undefined &&
+    !Array.isArray(configuredThresholdRangePoints)
+      ? configuredThresholdRangePoints
       : null;
   const thresholdRangePoints = useDerivedValue<LiveChartPoint[] | undefined>(
     () =>
       thresholdRangeSourceSV
         ? thresholdRangeSourceSV.value
-        : (config.thresholdRangePoints as LiveChartPoint[] | undefined),
+        : (configuredThresholdRangePoints as LiveChartPoint[] | undefined),
   );
   const thresholdRangeExtendToNow = useDerivedValue(
-    () => config.thresholdRangeExtendToNow ?? true,
+    () => configuredThresholdRangeExtendToNow ?? true,
   );
-  const nonNegativeSV = useDerivedValue(() => config.nonNegative ?? false);
-  const maxValueSV = useDerivedValue(() => config.maxValue);
   // A caller that owns "now" on the UI thread — a replay sliding its window
   // every frame — passes the shared value straight in, rather than
   // re-rendering the chart to move a prop.
-  const nowOverrideProp = useDerivedValue(() => config.nowOverride);
+  const nowOverrideProp = useDerivedValue(() => nowOverride);
   const nowOverrideSV =
-    (config.nowOverrideValue as SharedValue<number | undefined> | undefined) ??
+    (nowOverrideValue as SharedValue<number | undefined> | undefined) ??
     nowOverrideProp;
-  const windowBufferSV = useDerivedValue(() => config.windowBuffer ?? 0);
-  const pausedSV = useDerivedValue(() => config.paused ?? false);
+  const thresholdRangeExtendToStart = useDerivedValue(
+    () => configuredThresholdRangeExtendToStart ?? true,
+  );
+  const nonNegativeSV = useDerivedValue(() => nonNegative ?? false);
+  const maxValueSV = useDerivedValue(() => maxValue);
+  const windowBufferSV = useDerivedValue(() => windowBuffer ?? 0);
+  const pausedSV = useDerivedValue(() => paused ?? false);
   // Whether time-scroll is active. Drives the return-to-live reaction below
   // (the tick no longer reads it — clearing `viewEnd` is what makes it follow).
   // Defaults to enabled so a caller that omits it behaves as before.
-  const scrollEnabledSV = useDerivedValue(() => config.scrollEnabled ?? true);
+  const scrollEnabledSV = useDerivedValue(() => scrollEnabled ?? true);
   // Honor a viewEnd parked past the live edge (timeScroll.overscroll).
   const allowFutureViewEndSV = useDerivedValue(
-    () => config.allowFutureViewEnd ?? false,
+    () => allowFutureViewEnd ?? false,
   );
   // Return-to-live glide duration (ms); 0 = instant snap. Read by the reaction.
   const returnToLiveMsSV = useDerivedValue(
-    () => config.returnToLiveMs ?? RETURN_TO_LIVE_MS,
+    () => returnToLiveMs ?? RETURN_TO_LIVE_MS,
   );
-  const modeSV = useDerivedValue(() => config.mode ?? "line");
-  const candleGapsSV = useDerivedValue(() => config.candleGaps);
+  const modeSV = useDerivedValue(() => mode ?? "line");
+  const candleGapsSV = useDerivedValue(() => candleGaps);
   const candleGapBridgeNoTradesSV = useDerivedValue(
-    () => config.candleGapBridgeNoTrades ?? false,
+    () => candleGapBridgeNoTrades ?? false,
   );
   const candleGapBridgeUnavailableSV = useDerivedValue(
-    () => config.candleGapBridgeUnavailable ?? false,
+    () => candleGapBridgeUnavailable ?? false,
   );
   const candleGapBridgeUnknownSV = useDerivedValue(
-    () => config.candleGapBridgeUnknown ?? false,
+    () => candleGapBridgeUnknown ?? false,
   );
 
   // Animation state (mutated on UI thread each frame)
   const displayValue = useSharedValue(0);
   const displayMin = useSharedValue(0);
   const displayMax = useSharedValue(1);
-  const displayWindow = useSharedValue(config.timeWindow);
+  const displayWindow = useSharedValue(configuredTimeWindow);
   const canvasWidth = useSharedValue(0);
   const canvasHeight = useSharedValue(0);
   // Seed once; overwritten by the frame callback on the first tick.
@@ -532,8 +589,6 @@ export function useLiveChartEngine(
 
   // High-frequency data reads directly from the caller's shared values —
   // no useDerivedValue bridging, no closure serialization per tick.
-  const { data, value, candles, liveCandle } = config;
-
   // One-shot "snap the framing" flag. The effect below flips it to `true` when
   // `snapKey` changes; the next frame consumes it (bypassing `smoothing` for the
   // window / range / value) and clears it, so a timeframe / dataset switch lands
@@ -541,84 +596,164 @@ export function useLiveChartEngine(
   const snapSV = useSharedValue(false);
   // Compare against the previous key (not a "first render" flag) so React 18
   // StrictMode's double-invoked mount effect can't fire a spurious snap.
-  const lastSnapKey = useRef(config.snapKey);
+  const lastSnapKey = useRef(snapKey);
   // Layout effect, not passive: a passive effect runs after the commit has
   // painted, so the frame between them draws the new data/candleWidth against
   // the OLD framing (a one-frame squeeze on a timeframe switch). Flipping the
   // flag before paint lets the first frame with the new props consume the snap.
   useLayoutEffect(() => {
-    if (config.snapKey === lastSnapKey.current) return;
-    lastSnapKey.current = config.snapKey;
+    if (snapKey === lastSnapKey.current) return;
+    lastSnapKey.current = snapKey;
     snapSV.set(true);
-  }, [config.snapKey, snapSV]);
+  }, [snapKey, snapSV]);
 
   // Static charts run zero per-frame loops. `isStaticSV` gates both the
   // frame-callback autostart and the one-shot settle reaction below.
-  const isStaticSV = useDerivedValue(() => config.static ?? false);
+  const isStaticSV = useDerivedValue(() => isStatic ?? false);
 
   // Single refs object shared by the frame callback and the settle reaction so
-  // they can never drift out of sync.
-  const frameRefs: EngineFrameRefs = {
-    data,
-    value,
-    displayValue,
-    displayMin,
-    displayMax,
-    displayWindow,
-    timestamp,
-    canvasWidth,
-    canvasHeight,
-    timeWindow,
-    smoothing,
-    adaptiveSpeedBoostSV,
-    exaggerateSV,
-    referenceValue,
-    referenceValues,
-    thresholdRangePoints,
-    thresholdRangeExtendToNow,
-    nonNegativeSV,
-    maxValueSV,
-    yRangeScaleSV: config.yRangeScale,
-    yRangeOffsetSV: config.yRangeOffset,
-    yRangeOverrideSV: config.yRangeOverride,
-    nowOverrideSV,
-    windowBufferSV,
-    pausedSV,
-    viewEndSV: viewEnd,
-    allowFutureViewEndSV,
-    returnTSV: returnT,
-    returnFromSV: returnFrom,
-    viewWindowSV: viewWindow,
-    liveEdgeSV: liveEdge,
-    edgeValueSV: edgeValue,
-    snapSV,
-    modeSV,
-    candles,
-    liveCandle,
-    candleGapsSV,
-    candleGapBridgeNoTradesSV,
-    candleGapBridgeUnavailableSV,
-    candleGapBridgeUnknownSV,
-    extremaMinValue,
-    extremaMaxValue,
-    extremaMinTime,
-    extremaMaxTime,
-  };
-  const [frameScratchRef] = useState(() => ({
-    current: makeEngineFrameScratch(),
-  }));
+  // they can never drift out of sync. Keep its identity stable across unrelated
+  // React renders: Reanimated uses captured closure values as implicit reaction
+  // dependencies, and rebuilding this object would unregister/re-register the
+  // static settle mapper behind its path consumers. See #329.
+  const frameRefs = useMemo<EngineFrameRefs>(
+    () => ({
+      data,
+      value,
+      displayValue,
+      displayMin,
+      displayMax,
+      displayWindow,
+      timestamp,
+      canvasWidth,
+      canvasHeight,
+      timeWindow,
+      smoothing,
+      adaptiveSpeedBoostSV,
+      exaggerateSV,
+      referenceValue,
+      referenceValues,
+      thresholdRangePoints,
+      thresholdRangeExtendToStart,
+      thresholdRangeExtendToNow,
+      nonNegativeSV,
+      maxValueSV,
+      yRangeScaleSV: yRangeScale,
+      yRangeOffsetSV: yRangeOffset,
+      yRangeOverrideSV: yRangeOverride,
+      nowOverrideSV,
+      windowBufferSV,
+      pausedSV,
+      viewEndSV: viewEnd,
+      allowFutureViewEndSV,
+      returnTSV: returnT,
+      returnFromSV: returnFrom,
+      viewWindowSV: viewWindow,
+      liveEdgeSV: liveEdge,
+      edgeValueSV: edgeValue,
+      snapSV,
+      modeSV,
+      candles,
+      liveCandle,
+      candleGapsSV,
+      candleGapBridgeNoTradesSV,
+      candleGapBridgeUnavailableSV,
+      candleGapBridgeUnknownSV,
+      extremaMinValue,
+      extremaMaxValue,
+      extremaMinTime,
+      extremaMaxTime,
+    }),
+    [
+      adaptiveSpeedBoostSV,
+      allowFutureViewEndSV,
+      candleGapBridgeNoTradesSV,
+      candleGapBridgeUnavailableSV,
+      candleGapBridgeUnknownSV,
+      candleGapsSV,
+      candles,
+      canvasHeight,
+      canvasWidth,
+      data,
+      displayMax,
+      displayMin,
+      displayValue,
+      displayWindow,
+      edgeValue,
+      exaggerateSV,
+      extremaMaxTime,
+      extremaMaxValue,
+      extremaMinTime,
+      extremaMinValue,
+      liveCandle,
+      liveEdge,
+      maxValueSV,
+      modeSV,
+      nonNegativeSV,
+      nowOverrideSV,
+      pausedSV,
+      referenceValue,
+      referenceValues,
+      returnFrom,
+      returnT,
+      smoothing,
+      snapSV,
+      thresholdRangeExtendToNow,
+      thresholdRangeExtendToStart,
+      thresholdRangePoints,
+      timeWindow,
+      timestamp,
+      value,
+      viewEnd,
+      viewWindow,
+      windowBufferSV,
+      yRangeScale,
+      yRangeOffset,
+      yRangeOverride,
+    ],
+  );
+  const frameScratchRef = useRef<EngineFrameScratch | null>(null);
+  if (frameScratchRef.current === null) {
+    // React permits this predictable lazy-ref initialization: https://react.dev/reference/react/useRef#avoiding-recreating-the-ref-contents
+    // react-doctor-disable-next-line react-doctor/no-ref-current-in-render -- false positive for React's documented lazy-ref exception
+    frameScratchRef.current = makeEngineFrameScratch();
+  }
 
   // `autostart=false` registers the frame callback without running it — the live
   // loop is fully inert in static mode (the invariant that makes this worth it).
   const engineFrameCallback = useFrameCallback((frameInfo) => {
     "worklet";
+    if (isFrameLoopActive?.get() === false) return;
+    const beforeValue = debugFrameStats ? displayValue.get() : 0;
+    const beforeMin = debugFrameStats ? displayMin.get() : 0;
+    const beforeMax = debugFrameStats ? displayMax.get() : 0;
+    const beforeWindow = debugFrameStats ? displayWindow.get() : 0;
+    const beforeTimestamp = debugFrameStats ? timestamp.get() : 0;
+    const beforeLiveEdge = debugFrameStats ? liveEdge.get() : 0;
+    const beforeEdgeValue = debugFrameStats ? edgeValue.get() : 0;
     applyLiveChartEngineFrame(frameInfo, frameRefs, frameScratchRef.current!);
-  }, !config.static);
+    if (debugFrameStats) {
+      const didPublish =
+        beforeValue !== displayValue.get() ||
+        beforeMin !== displayMin.get() ||
+        beforeMax !== displayMax.get() ||
+        beforeWindow !== displayWindow.get() ||
+        beforeTimestamp !== timestamp.get() ||
+        beforeLiveEdge !== liveEdge.get() ||
+        beforeEdgeValue !== edgeValue.get();
+      const previous = debugFrameStats.get();
+      debugFrameStats.set({
+        frames: previous.frames + 1,
+        published: previous.published + (didPublish ? 1 : 0),
+        skipped: previous.skipped + (didPublish ? 0 : 1),
+      });
+    }
+  }, !isStatic);
   useEffect(() => {
     // Reanimated only seeds `isActive` from `autostart` on mount. Keep the
     // imperative state aligned when a chart switches between static and live.
-    engineFrameCallback.setActive(!config.static);
-  }, [config.static, engineFrameCallback]);
+    engineFrameCallback.setActive(!isStatic);
+  }, [isStatic, engineFrameCallback]);
 
   // When time-scroll is disabled while scrolled back, return the window to the
   // live edge. With a positive duration this glides: snapshot the frozen edge into
@@ -680,6 +815,10 @@ export function useLiveChartEngine(
         frameScratchRef.current!,
       );
     },
+    // Reanimated otherwise derives dependencies from closure values. Keeping
+    // this mapper registered in its original hook-order position ensures range
+    // settling runs before the path mappers on a static data swap. See #329.
+    [frameRefs, frameScratchRef],
   );
 
   return {

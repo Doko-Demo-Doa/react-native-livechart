@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - TGFX now preserves UI-thread updates to gradient stops and combines nested
   animated opacities before compilation, preventing stale segment gradients and
   mode-transition fades.
+- `font.typeface` now registers a custom font source with TGFX under the
+  configured `fontFamily` for both chart canvases.
 
 ### Added
 
@@ -35,7 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **BREAKING:** the rendering backend is now `react-native-tgfx`
-`0.0.2-alpha.10`, replacing `@shopify/react-native-skia`. Applications must
+`0.0.2-alpha.12`, replacing `@shopify/react-native-skia`. Applications must
 install `react-native-tgfx` and `react-native-nitro-modules` `>=0.36.5`, use
 the New Architecture, and run a native development build (TGFX is unavailable
 in Expo Go and on React Native Web).
@@ -43,6 +45,73 @@ in Expo Go and on React Native Web).
   picture-to-image bridge used by the previous sprite atlases. Built-in stamped
   markers and degen particle bursts are therefore withheld; connector markers
   and custom React Native markers continue to render.
+
+## [4.23.0] - 2026-09-22
+
+### Added
+
+- `LiveChart.isFrameLoopActive` accepts a `SharedValue<boolean>` that suspends
+  continuous frame work without disabling pan, zoom, scrub, or draggable
+  reference lines.
+- `LiveChart.debugFrameStats` exposes optional development counters for active
+  engine frames and tracked engine-state updates.
+- `yAxis.side: "left" | "right"` for single- and multi-series charts. Left labels
+  use the caller-reserved `insets.left` gutter and remain visible above edge fades.
+
+### Fixed
+
+- Idle charts settle sub-pixel engine motion, park invisible pulse frames,
+  finish candle-width interpolation, and reuse text measurements instead of
+  continuously invalidating Skia at the display refresh rate. Resolves
+  [#304](https://github.com/brandtnewlabs/react-native-livechart/issues/304).
+- Dragging a reference line no longer opens the scrub crosshair part-way
+  through the drag. The scrub pan can activate while a line is being dragged
+  and asked its guard with its touch-down point, which a longer drag had
+  carried the line away from; a grabbed line now owns the touch outright.
+
+## [4.22.2] - 2026-09-21
+
+### Fixed
+
+- Static line charts no longer draw replacement data for one frame against the
+  previous dataset's Y range after an unrelated React re-render. Resolves
+  [#329](https://github.com/brandtnewlabs/react-native-livechart/issues/329).
+
+## [4.22.1] - 2026-09-18
+
+### Fixed
+
+- Custom-manager chart fonts are reused across renders with unchanged font
+  settings, and loaded typefaces no longer trigger unused fallback font matches.
+
+## [4.22.0] - 2026-09-18
+
+### Added
+
+- Time-varying thresholds and Form-B reference lines now support
+  `extendToStart: false`, which leaves the chart unchanged before the series'
+  first point instead of carrying that first value backward to the visible
+  window start. Threshold stroke coloring, fill, marker, badge, and range fitting
+  all honor the cutoff. Resolves
+  [#326](https://github.com/brandtnewlabs/react-native-livechart/issues/326).
+
+## [4.21.1] - 2026-09-12
+
+### Changed
+
+- Chart controllers, overlays, and frame state now avoid unnecessary render-time
+  allocations and reconcile reactive values more reliably, without changing the
+  public API.
+
+### Fixed
+
+- Charts now treat one line point, one multi-series point, or one committed
+  candle as valid data instead of showing the empty-state label. Resolves
+  [#302](https://github.com/brandtnewlabs/react-native-livechart/issues/302).
+- Extrema labels and their connector lines now hide while the loading shell is
+  active. Flat series whose high and low resolve to the same point render one
+  extrema label instead of drawing the same label twice. Resolves
+  [#303](https://github.com/brandtnewlabs/react-native-livechart/issues/303).
 
 ## [4.21.0] - 2026-08-26
 
@@ -1325,6 +1394,7 @@ Initial public release.
   compiles it with your own Reanimated/Worklets version. `dist/` contains only `.d.ts`
   declarations — there is no precompiled runtime `dist/*.js`.
 
+[4.23.0]: https://github.com/brandtnewlabs/react-native-livechart/releases/tag/v4.23.0
 [4.21.0]: https://github.com/brandtnewlabs/react-native-livechart/releases/tag/v4.21.0
 [4.20.0]: https://github.com/brandtnewlabs/react-native-livechart/releases/tag/v4.20.0
 [4.19.0]: https://github.com/brandtnewlabs/react-native-livechart/releases/tag/v4.19.0

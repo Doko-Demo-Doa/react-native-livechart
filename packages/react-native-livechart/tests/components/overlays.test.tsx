@@ -183,6 +183,45 @@ describe("YAxisOverlay", () => {
     expect(labels.map((view) => view.props.x.value)).toEqual([350, 350]);
   });
 
+  it.each([false, true])(
+    "centers left labels without shortening the grid (float=%s)",
+    async (float) => {
+      function Fixture() {
+        const entries = useSharedValue([
+          { y: 40, label: "10", alpha: 0.8 },
+          { y: 80, label: "100000", alpha: 1 },
+        ]);
+        const badgeCenterY = useSharedValue(40);
+        return (
+          <YAxisOverlay
+            entries={entries}
+            engine={engine()}
+            padding={{ ...DEFAULT_PADDING, left: 60 }}
+            palette={palette}
+            font={font}
+            side="left"
+            float={float}
+            labelRightMargin={8}
+            gridEndGap={6}
+            badge
+            badgeCenterY={badgeCenterY}
+            badgeFontSize={12}
+          />
+        );
+      }
+      const screen = await render(<Fixture />);
+      const serialized = JSON.stringify(screen.toJSON());
+      expect(serialized).toContain("M60 40 L388 40");
+      const labels = getAllByHostType(screen, View).filter(
+        (view) =>
+          view.props.text?.value === "10" ||
+          view.props.text?.value === "100000",
+      );
+      expect(labels.map((view) => view.props.x.value)).toEqual([23, 9]);
+      expect(labels[0].parent?.props.opacity.value).toBe(0.8);
+    },
+  );
+
   it("renders with live-badge collision suppression enabled", async () => {
     function Fixture() {
       const entries = useSharedValue([{ y: 40, label: "10", alpha: 1 }]);

@@ -114,9 +114,19 @@ platform-registered font family:
 />
 ```
 
-TGFX's canvas-level custom-font registration is not yet exposed by LiveChart.
-The legacy `typeface` and `fontManager` fields are accepted for source
-compatibility but currently ignored.
+Pass a font file to `typeface` to register it under `fontFamily` on the TGFX
+canvas. The source can be a Metro `require()` asset, URI, or base64 string.
+
+```tsx
+<LiveChart
+  data={data}
+  value={value}
+  font={{ fontFamily: "ChartFont", typeface: require("./ChartFont.ttf") }}
+/>
+```
+
+`fontManager` remains accepted for source compatibility but is ignored by TGFX.
+For a family with multiple weights, register the faces with TGFX before rendering.
 
 <Note>
   Shaping the live-edge value pill, the grid and axes, or the high / low edge labels has moved to

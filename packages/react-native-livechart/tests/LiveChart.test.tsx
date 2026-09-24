@@ -868,10 +868,10 @@ describe("LiveChart", () => {
     await layoutFirst(await render(<LiveSeriesHarness />));
   });
 
-  it("clips the split at the series end with extendToNow: false", async () => {
+  it("wires series endpoint clips into the threshold split shader", async () => {
     const screen = await render(
       <ThresholdSeriesHarness
-        thresholdExtra={{ extendToNow: false } as never}
+        thresholdExtra={{ extendToStart: false, extendToNow: false } as never}
       />,
     );
     await layoutFirst(screen);
@@ -881,6 +881,7 @@ describe("LiveChart", () => {
     // The clip uniforms are wired (their live values are computed on the UI
     // thread post-layout — pinned in the useThresholdSeries hook tests; the
     // jest stub freezes derived values at their pre-layout mount computation).
+    expect(typeof shaders[0].props.uniforms.value.clipLeft).toBe("number");
     expect(typeof shaders[0].props.uniforms.value.clipRight).toBe("number");
     expect(shaders[0].props.uniforms.value.restColor).toHaveLength(4);
   });
@@ -948,11 +949,14 @@ describe("LiveChart", () => {
   });
 
   it("accepts a custom font config", async () => {
-    await render(
+    const screen = await render(
       <Harness
-        font={{ fontFamily: "Courier", fontSize: 13, fontWeight: "700" }}
+        font={{ fontFamily: "Courier", fontSize: 13, fontWeight: "700", typeface: 42 }}
       />,
     );
+    expect(getAllByHostType(screen, View).some(
+      (view) => view.props.fonts?.Courier?.[0] === 42,
+    )).toBe(true);
   });
 
   it("renders in candle mode", async () => {
@@ -1162,6 +1166,7 @@ describe("LiveChart", () => {
       undefined,
       true,
       false,
+      undefined,
     );
 
     await screen.rerender(
@@ -1172,7 +1177,13 @@ describe("LiveChart", () => {
       />,
     );
 
-    expect(widthLerpSpy).toHaveBeenLastCalledWith(86_400, 1, true, true);
+    expect(widthLerpSpy).toHaveBeenLastCalledWith(
+      86_400,
+      1,
+      true,
+      true,
+      undefined,
+    );
     widthLerpSpy.mockRestore();
   });
 

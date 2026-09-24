@@ -16,6 +16,16 @@ export interface LiveChartPoint {
   value: number;
 }
 
+/** Development counters for continuous engine-frame state updates. */
+export interface LiveChartFrameStats {
+  /** Frame callbacks that ran while the chart was live. */
+  frames: number;
+  /** Frames that changed at least one tracked engine value. */
+  published: number;
+  /** Frames whose tracked engine values were unchanged. */
+  skipped: number;
+}
+
 /** Direction of recent price movement, used for dot/badge coloring and degen effects. */
 export type Momentum = "up" | "down" | "flat";
 
@@ -73,10 +83,16 @@ export interface ReferenceLine {
   /**
    * Form B — a time-varying reference line. Points use unix-second timestamps
    * and should be sorted oldest to newest. The first value extends to the left
-   * edge; the last value extends to the live edge unless {@link extendToNow} is
-   * `false`. Supported by line and candle charts.
+   * edge unless {@link extendToStart} is `false`; the last value extends to the
+   * live edge unless {@link extendToNow} is `false`. Supported by line and
+   * candle charts.
    */
   series?: LiveChartPoint[];
+  /**
+   * Form B — extend the series' first value flat to the chart's left edge.
+   * Set `false` to start at the first point. Default `true`.
+   */
+  extendToStart?: boolean;
   /**
    * Form B — extend the series' last value flat to the chart's live edge.
    * Set `false` to stop at the last point. Default `true`.
@@ -492,8 +508,8 @@ export interface ThresholdConfig {
    * - **`LiveChartPoint[]`** — a *time-varying* threshold (e.g. a historical
    *   break-even that steps up as you average in). The stroke split, fill band
    *   and marker line follow the series point-for-point. The series clamps to its
-   *   first/last value outside its own time range, so a threshold whose last
-   *   point sits behind the live edge extends as a flat line to "now" (see
+   *   first/last value outside its own time range, so it extends flat to the
+   *   visible edges by default (see {@link extendToStart} and
    *   {@link extendToNow}). Flows in on re-render — pass a stable (memoized)
    *   array and reserve it for thresholds that change occasionally; for a
    *   threshold series that updates live, use {@link series} instead.
@@ -530,10 +546,19 @@ export interface ThresholdConfig {
    * Fold the threshold into the Y-axis range fit — like reference lines — so a
    * benchmark outside the data's own range stays on-plot instead of rendering
    * invisibly (marker off-plot, whole line one color). For a series, the values
-   * visible in the current window count (respecting {@link extendToNow}).
+   * visible in the current window count (respecting {@link extendToStart} and
+   * {@link extendToNow}).
    * Default `false` (range fits the data only).
    */
   includeInRange?: boolean;
+  /**
+   * Series forms only: extend the threshold **flat before its first point to the
+   * visible window's left edge**, carrying the first known benchmark backward.
+   * Set `false` when the benchmark did not exist yet (for example, a break-even
+   * before the first trade) — left of the first point the stroke keeps its plain
+   * line color and the band / marker do not begin. Default `true`.
+   */
+  extendToStart?: boolean;
   /**
    * Series forms only: extend the threshold **flat past its last point to
    * "now"**, carrying the last known benchmark forward. Set `false` for a
@@ -691,6 +716,9 @@ export interface VolumeConfig {
 
 /** Y-axis grid configuration. */
 export interface YAxisConfig {
+  /** Price-label side. For left placement, reserve the label gutter with insets.left.
+   * Right-side float/labelRightMargin options do not affect left labels. Default "right". */
+  side?: "left" | "right";
   /** Minimum pixel gap between grid lines. Default `36`. */
   minGap?: number;
   /**
@@ -1361,9 +1389,8 @@ export interface FontConfig {
   /** Font weight. Default `"normal"`. */
   fontWeight?: FontWeight;
   /**
-   * @deprecated TGFX registers custom files through the canvas `fonts` prop, which is not yet
-   * exposed by LiveChart. This legacy field is accepted for source compatibility but ignored;
-   * use a platform-registered `fontFamily`.
+   * Custom font asset, URI, or base64 source registered under `fontFamily` by
+   * the TGFX canvas. For multiple weights, register the family with TGFX first.
    */
   typeface?: DataSourceParam;
   /**
@@ -2262,7 +2289,7 @@ export interface LiveChartCoreProps {
   transitions?: boolean | TransitionConfig;
   /**
    * Breathing-line loading shell. When this becomes `false`, the chart reveals
-   * only if there is data (≥2 line points or ≥2 committed candles).
+   * only if there is data (≥1 line point or ≥1 committed candle).
    *
    * `true` shows the shell with the defaults; pass a {@link LoadingConfig} to
    * restyle it — `color` / `strokeWidth` for the squiggle + skeleton, `amplitude`
@@ -2331,8 +2358,8 @@ export interface LiveChartCoreProps {
    */
   yRangeScale?: SharedValue<number>;
   /**
-   * Label in the empty state when `loading` is false and there are fewer than
-   * two samples (line points or committed candles). Default `"No data"`.
+   * Label in the empty state when `loading` is false and there are no line
+   * points or committed candles. Default `"No data"`.
    */
   emptyText?: string;
   /** Custom formatter for value labels (axes, badge, tooltips). Default `v => v.toFixed(2)`. */
@@ -2685,6 +2712,23 @@ export interface LiveChartProps extends LiveChartCoreProps {
    *  switching back to live restarts the suspended loops and catches up. Frame the data
    *  with `timeWindow` + `nowOverride` (see the historical-data-fill pattern). */
   static?: boolean;
+  /**
+   * Runtime gate for continuous frame work. Set this SharedValue to `false`
+   * while a parent scroll gesture needs the UI thread; data keeps updating and
+   * the chart catches up when it becomes `true`. Unlike {@link static}, this
+   * keeps pan, zoom, scrub, and draggable reference-line gestures mounted.
+   *
+   * @experimental
+   */
+  isFrameLoopActive?: SharedValue<boolean>;
+  /**
+   * Optional development counter for engine frames that did or did not change
+   * tracked engine values. It is not a count of Skia redraws. Supplying it adds
+   * one SharedValue write per active engine frame.
+   *
+   * @experimental
+   */
+  debugFrameStats?: SharedValue<LiveChartFrameStats>;
   /**
    * Render a custom overlay floated over the chart canvas, handed a price↔pixel /
    * time↔pixel {@link ChartOverlayContext} so it can track the auto-rescaling axis

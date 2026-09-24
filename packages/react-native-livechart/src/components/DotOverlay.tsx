@@ -15,6 +15,32 @@ import { ambientOpacity } from "../math/opacity";
 import type { LiveChartPalette } from "../types";
 
 const MIN_PULSE_RADIUS = 9;
+const PULSE_PIXEL_STEP = 0.5;
+
+/**
+ * Quantizes the pulse clock to visible radius changes and parks it while the
+ * pulse is fully transparent.
+ */
+export function quantizePulseClock(
+  timestamp: number,
+  interval: number,
+  duration: number,
+  maxRadius: number,
+): number {
+  "worklet";
+  const cycleStart = Math.floor(timestamp / interval) * interval;
+  const elapsed = timestamp - cycleStart;
+  if (elapsed >= duration) return cycleStart + duration;
+
+  const radiusTravel = maxRadius - MIN_PULSE_RADIUS;
+  if (!(radiusTravel > 0) || !(duration > 0)) return cycleStart;
+  const millisecondsPerStep =
+    (duration * PULSE_PIXEL_STEP) / radiusTravel;
+  return (
+    cycleStart +
+    Math.floor(elapsed / millisecondsPerStep) * millisecondsPerStep
+  );
+}
 
 /**
  * Live dot + expanding pulse ring. The dot is a color-filled circle of `radius`
@@ -34,6 +60,7 @@ export function DotOverlay({
   viewEnd,
   pulseWhileParked = false,
   groupOpacity,
+  isFrameLoopActive,
 }: {
   dotX: SharedValue<number>;
   dotY: SharedValue<number>;
@@ -68,6 +95,8 @@ export function DotOverlay({
    * in a single `<Group opacity={groupOpacity}>` is still safe.
    */
   groupOpacity?: SharedValue<number>;
+  /** Runtime gate shared with the chart engine. */
+  isFrameLoopActive?: SharedValue<boolean>;
 }) {
   const dotColor = color ?? palette.line;
 
@@ -78,7 +107,13 @@ export function DotOverlay({
   const pulseClockMs = useSharedValue(0);
   /* istanbul ignore next -- frame-callback worklet runs on the UI thread, not in Jest */
   const pulseClock = useFrameCallback((frame) => {
-    pulseClockMs.value = frame.timestamp;
+    if (!pulse || isFrameLoopActive?.get() === false) return;
+    pulseClockMs.value = quantizePulseClock(
+      frame.timestamp,
+      pulse.interval,
+      pulse.duration,
+      pulse.maxRadius,
+    );
   }, pulse != null);
   useEffect(() => {
     pulseClock.setActive(pulse != null);

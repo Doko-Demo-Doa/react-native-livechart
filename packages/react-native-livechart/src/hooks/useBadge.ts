@@ -1,4 +1,5 @@
 import { type SkFont } from "../tgfx";
+import { useRef } from "react";
 import {
   useDerivedValue,
   useSharedValue,
@@ -9,7 +10,10 @@ import {
   MOTION_METRICS_DEFAULTS,
   MS_PER_FRAME_60FPS,
 } from "../constants";
-import { measureFontTextWidth } from "../lib/measureFontTextWidth";
+import {
+  measureFontTextWidth,
+  type TextWidthCache,
+} from "../lib/measureFontTextWidth";
 import type { ChartEngineWithLiveValue } from "../core/useLiveChartEngine";
 import {
   badgeTailAndCap,
@@ -66,6 +70,7 @@ export function useBadge(
   const colorG = useSharedValue(0);
   const colorB = useSharedValue(0);
   const colorA = useSharedValue(1);
+  const textWidthCacheRef = useRef<TextWidthCache>({});
 
   const upRgb = hexToRgb(palette.dotUp);
   const downRgb = hexToRgb(palette.dotDown);
@@ -116,7 +121,7 @@ export function useBadge(
         : padding.top + ((dMax - liveVal) / valRange) * chartH;
 
     const text = formatValue(liveVal);
-    const textW = measureFontTextWidth(font, text);
+    const textW = measureFontTextWidth(font, text, textWidthCacheRef.current);
 
     const pillH = font.getSize() + badgeMetrics.padY * 2;
     // Keeps the pill inside the plot without moving the live dot — a value
