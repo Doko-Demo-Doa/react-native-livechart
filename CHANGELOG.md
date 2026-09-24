@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- TGFX now preserves UI-thread updates to gradient stops and combines nested
+  animated opacities before compilation, preventing stale segment gradients and
+  mode-transition fades.
+
 ### Added
 
 - **External chart-chrome and Y-range control for `LiveChart`.** New optional

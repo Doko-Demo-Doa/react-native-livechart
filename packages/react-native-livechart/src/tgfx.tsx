@@ -5,7 +5,7 @@
  * while the drawing primitives use TGFX's declarative, SharedValue-aware scene.
  * New code should use TGFX names/props directly where possible.
  */
-import type { ComponentType, ReactNode } from "react";
+import { useMemo, type ComponentType, type ReactNode } from "react";
 import {
   Atlas as TgfxAtlas,
   Blur as TgfxBlur,
@@ -22,7 +22,7 @@ import {
   Shader as TgfxShader,
   Text as TgfxText,
 } from "react-native-tgfx";
-import { useDerivedValue } from "react-native-reanimated";
+import { makeMutable, useDerivedValue } from "react-native-reanimated";
 
 export type SkPath = any;
 export type SkColor = string;
@@ -67,38 +67,68 @@ export function vec(x = 0, y = 0) {
 export const Canvas = any(TgfxCanvas);
 export const Group = any(TgfxGroup);
 export const Circle = any(TgfxCircle);
-/**
- * TGFX supports live individual gradient stops, but its alpha compiler expects
- * the stop *list* itself to be a JS array. Skia accepted a SharedValue of an
- * array, which the chart uses for a few UI-thread calculations (notably the
- * initial loading mask). Snapshot that outer list before passing it to TGFX.
- */
-function gradientList(value: unknown) {
-  if (Array.isArray(value) || value == null) return value;
-  if (typeof value === "object") {
-    const live = value as { get?: () => unknown; value?: unknown };
+type LiveList = { get?: () => unknown; value?: unknown };
+
+function currentList(value: unknown): unknown[] | undefined {
+  "worklet";
+  if (Array.isArray(value)) return value;
+  if (value && typeof value === "object") {
+    const live = value as LiveList;
     const current = live.get?.() ?? live.value;
-    return Array.isArray(current) ? current : value;
+    return Array.isArray(current) ? current : undefined;
   }
-  return value;
+  return undefined;
+}
+
+/**
+ * TGFX needs a JS array whose individual entries are live values. Skia also
+ * accepts a SharedValue containing the entire list, so bridge that shape by
+ * mirroring each stop into its own SharedValue. This preserves UI-thread
+ * updates to segment gradients instead of freezing their initial values.
+ */
+function useGradientStops(value: unknown): unknown {
+  const initial = currentList(value);
+  const isLiveList = !Array.isArray(value) && initial !== undefined;
+  const stopCount = initial?.length ?? 0;
+  const stops = useMemo(
+    () => (initial ?? []).map((stop) => makeMutable(stop)),
+    // SegmentLineGradient remounts when its stop count changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [stopCount],
+  );
+
+  useDerivedValue(() => {
+    if (!isLiveList) return;
+    const next = currentList(value);
+    if (!next) return;
+    for (let index = 0; index < stops.length; index += 1) {
+      stops[index]?.set(next[index]);
+    }
+  }, [isLiveList, value, stops]);
+
+  return isLiveList ? stops : initial ?? value;
 }
 
 export function LinearGradient({ colors, positions, ...props }: AnyProps) {
+  const liveColors = useGradientStops(colors);
+  const livePositions = useGradientStops(positions);
   return (
     <RawLinearGradient
       {...props}
-      colors={gradientList(colors)}
-      positions={gradientList(positions)}
+      colors={liveColors}
+      positions={livePositions}
     />
   );
 }
 
 export function RadialGradient({ colors, positions, ...props }: AnyProps) {
+  const liveColors = useGradientStops(colors);
+  const livePositions = useGradientStops(positions);
   return (
     <RawRadialGradient
       {...props}
-      colors={gradientList(colors)}
-      positions={gradientList(positions)}
+      colors={liveColors}
+      positions={livePositions}
     />
   );
 }

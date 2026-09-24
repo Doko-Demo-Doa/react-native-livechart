@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ReactNode,
 } from "react";
 import { StyleSheet, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
@@ -2258,60 +2259,77 @@ function ChartCandleLayer({ model }: { model: LiveChartModel }) {
     engine.displayWindow,
     displayCandleWidth,
   ]);
+  // TGFX alpha.12 snapshots nested animated opacities. Combining the consumer
+  // dim with the line↔candle reveal keeps both values live during transitions.
+  const candleOpacity = useDerivedValue(
+    () => seriesOpacity.get() * candleGroupOpacity.get(),
+    [seriesOpacity, candleGroupOpacity],
+  );
 
   return (
-    <Group opacity={seriesOpacity}>
-      <Group opacity={candleGroupOpacity}>
-        {candleGapsCfg && (
-          <ChartCandleGapLayer
-            model={model}
-            config={candleGapsCfg}
-            focusOtherCandles={focusOtherCandles}
-            inactiveOpacity={inactiveCandleOpacity}
-            focusedOpacity={focusedCandleOpacity}
-            focusedClip={focusedCandleClip}
-          />
-        )}
-        {focusOtherCandles ? (
-          <>
-            <Group opacity={inactiveCandleOpacity}>
-              <CandlePathBatch
-                paths={paths}
-                wickWidth={metricsCfg.candle.wickWidth}
-                palette={palette}
-              />
-            </Group>
-            <Group opacity={focusedCandleOpacity} clip={focusedCandleClip}>
-              <CandlePathBatch
-                paths={paths}
-                wickWidth={metricsCfg.candle.wickWidth}
-                palette={palette}
-              />
-            </Group>
-          </>
-        ) : (
-          <CandlePathBatch
-            paths={paths}
-            wickWidth={metricsCfg.candle.wickWidth}
-            palette={palette}
-          />
-        )}
-      </Group>
-
-      {volumeCfg && (
-        <Group opacity={candleGroupOpacity}>
-          <Group opacity={volumeOpacity}>
-            <Path path={paths.upBarsPath} style="fill" color={volumeUpColor} />
-            <Path
-              path={paths.downBarsPath}
-              style="fill"
-              color={volumeDownColor}
+    <Group opacity={candleOpacity}>
+      {candleGapsCfg && (
+        <ChartCandleGapLayer
+          model={model}
+          config={candleGapsCfg}
+          focusOtherCandles={focusOtherCandles}
+          inactiveOpacity={inactiveCandleOpacity}
+          focusedOpacity={focusedCandleOpacity}
+          focusedClip={focusedCandleClip}
+        />
+      )}
+      {focusOtherCandles ? (
+        <>
+          <Group opacity={inactiveCandleOpacity}>
+            <CandlePathBatch
+              paths={paths}
+              wickWidth={metricsCfg.candle.wickWidth}
+              palette={palette}
             />
           </Group>
+          <Group opacity={focusedCandleOpacity} clip={focusedCandleClip}>
+            <CandlePathBatch
+              paths={paths}
+              wickWidth={metricsCfg.candle.wickWidth}
+              palette={palette}
+            />
+          </Group>
+        </>
+      ) : (
+        <CandlePathBatch
+          paths={paths}
+          wickWidth={metricsCfg.candle.wickWidth}
+          palette={palette}
+        />
+      )}
+      {volumeCfg && (
+        <Group opacity={volumeOpacity}>
+          <Path path={paths.upBarsPath} style="fill" color={volumeUpColor} />
+          <Path
+            path={paths.downBarsPath}
+            style="fill"
+            color={volumeDownColor}
+          />
         </Group>
       )}
     </Group>
   );
+}
+
+function CombinedLineOpacity({
+  seriesOpacity,
+  lineGroupOpacity,
+  children,
+}: {
+  seriesOpacity: SharedValue<number>;
+  lineGroupOpacity: SharedValue<number>;
+  children: ReactNode;
+}) {
+  const opacity = useDerivedValue(
+    () => seriesOpacity.get() * lineGroupOpacity.get(),
+    [seriesOpacity, lineGroupOpacity],
+  );
+  return <Group opacity={opacity}>{children}</Group>;
 }
 
 /** Main shaken chart stack drawn ABOVE the left-edge fade so the line stays crisp:
@@ -2463,8 +2481,10 @@ function ChartStack({
           full-width gradient paints the base color outside segments and each
           segment's color within — so the line itself is recolored/faded (alpha in
           the segment color reduces the line's opacity), not covered by an overlay. */}
-      <Group opacity={seriesOpacity}>
-        <Group opacity={lineGroupOpacity}>
+      <CombinedLineOpacity
+        seriesOpacity={seriesOpacity}
+        lineGroupOpacity={lineGroupOpacity}
+      >
           <Path
             path={linePath}
             style="stroke"
@@ -2508,8 +2528,7 @@ function ChartStack({
             ) : null}
           </Path>
           {lineGapsCfg && <ChartLineGapLayer model={model} />}
-        </Group>
-      </Group>
+      </CombinedLineOpacity>
 
       {isCandle && <ChartCandleLayer model={model} />}
 
@@ -3135,7 +3154,9 @@ function ChartView({
         {/* Texture composition keeps the canvas in the React Native hierarchy, so
             the default transparent mode obeys parent clipping and transforms. */}
         <Canvas
-          key={canvasMode}
+          // Reset only TGFX's native scene on mode switches. Keep the chart
+          // controller mounted so its range, pan, zoom, and reveal state survive.
+          key={`${canvasMode}:${model.isCandle ? "candle" : "line"}`}
           style={{ flex: 1 }}
           composite={canvasMode === "transparent" ? "texture" : "layer"}
           opaque={canvasMode === "opaque"}

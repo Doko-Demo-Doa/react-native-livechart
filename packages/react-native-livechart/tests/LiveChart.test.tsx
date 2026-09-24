@@ -192,7 +192,10 @@ describe("LiveChart", () => {
   });
 
   it("applies series opacity to line and candle data layers", async () => {
-    const seriesOpacity = { value: 0.5 } as SharedValue<number>;
+    const seriesOpacity = {
+      value: 0.5,
+      get: () => 0.5,
+    } as SharedValue<number>;
     const matchingOpacityGroups = (
       screen: Awaited<ReturnType<typeof render>>,
     ) =>
@@ -202,12 +205,12 @@ describe("LiveChart", () => {
 
     expect(
       matchingOpacityGroups(await render(<Harness seriesOpacity={seriesOpacity} />)),
-    ).toHaveLength(2);
+    ).toHaveLength(1);
     expect(
       matchingOpacityGroups(
         await render(<CandleHarness seriesOpacity={seriesOpacity} />),
       ),
-    ).toHaveLength(3);
+    ).toHaveLength(1);
   });
 
   it("opts into an opaque canvas and replaces destination-alpha masks", async () => {
