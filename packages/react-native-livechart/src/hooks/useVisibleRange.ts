@@ -31,18 +31,19 @@ export interface UseVisibleRangeOptions {
 }
 
 /**
- * Throttle key for a visible range: integer seconds of each edge plus the
- * near-start flag. The reaction emits only when this changes, so a live chart
- * (whose right edge slides every frame) notifies at most ~once per second rather
- * than per frame, and `onReachStart` edge-triggers off the trailing flag.
+ * Throttle key for a visible range: integer seconds of each edge, follow
+ * state, and the near-start flag. Including follow state reports a return to
+ * live even when the rounded edges have not moved. `onReachStart` edge-triggers
+ * off the trailing flag.
  */
 export function rangeSignature(
   startSec: number,
   endSec: number,
+  following: boolean,
   near: boolean,
 ): string {
   "worklet";
-  return `${Math.round(startSec)}|${Math.round(endSec)}|${near ? 1 : 0}`;
+  return `${Math.round(startSec)}|${Math.round(endSec)}|${following ? 1 : 0}|${near ? 1 : 0}`;
 }
 
 /** Whether the window's left edge is within `threshold` seconds of the oldest data. */
@@ -100,7 +101,12 @@ export function useVisibleRange({
       const end = engine.timestamp.value;
       const win = engine.displayWindow.value;
       const start = end - win;
-      return rangeSignature(start, end, isNearStart(start, minTime.value, win));
+      return rangeSignature(
+        start,
+        end,
+        engine.viewEnd.value == null,
+        isNearStart(start, minTime.value, win),
+      );
     },
     /* istanbul ignore next -- Reanimated reaction; dispatches on the JS thread, not exercised under Jest */
     (curr, prev) => {

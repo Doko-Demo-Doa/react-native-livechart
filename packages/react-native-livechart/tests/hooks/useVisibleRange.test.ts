@@ -2,22 +2,28 @@ import { isNearStart, rangeSignature } from "../../src/hooks/useVisibleRange";
 
 describe("rangeSignature", () => {
   it("rounds each edge to integer seconds (throttle key)", () => {
-    expect(rangeSignature(1000.2, 1100.8, false)).toBe("1000|1101|0");
+    expect(rangeSignature(1000.2, 1100.8, true, false)).toBe("1000|1101|1|0");
   });
 
   it("encodes the near-start flag", () => {
-    expect(rangeSignature(1000, 1100, true)).toBe("1000|1100|1");
+    expect(rangeSignature(1000, 1100, true, true)).toBe("1000|1100|1|1");
   });
 
   it("is stable across sub-second drift (so a live chart throttles)", () => {
-    expect(rangeSignature(1000.1, 1100.1, false)).toBe(
-      rangeSignature(1000.4, 1099.6, false),
+    expect(rangeSignature(1000.1, 1100.1, true, false)).toBe(
+      rangeSignature(1000.4, 1099.6, true, false),
     );
   });
 
   it("changes once the edges cross a whole second", () => {
-    expect(rangeSignature(1000.4, 1100, false)).not.toBe(
-      rangeSignature(1001.4, 1100, false),
+    expect(rangeSignature(1000.4, 1100, true, false)).not.toBe(
+      rangeSignature(1001.4, 1100, true, false),
+    );
+  });
+
+  it("reports a change when follow state changes at the same time edge", () => {
+    expect(rangeSignature(1000, 1100, true, false)).not.toBe(
+      rangeSignature(1000, 1100, false, false),
     );
   });
 });

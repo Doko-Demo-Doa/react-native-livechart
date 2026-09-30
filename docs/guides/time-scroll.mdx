@@ -168,6 +168,16 @@ following live data instead of staying parked at the pinch anchor while its widt
 normal. Calling it again is a safe no-op. A paused chart remains paused, and the displayed width
 uses the chart's normal `smoothing` as it settles back to `timeWindow`.
 
+### Scroll to latest
+
+Call `chartRef.current?.scrollToLatest()` to return to the live edge with a
+450 ms ease while preserving the current pinch zoom. It works on both chart
+components. `onVisibleRangeChange` reports `following: true` when the glide
+finishes, even if the visible edge has not crossed another rounded second.
+Use the reported `endSec` against your live edge to show a forward button only
+while the chart is scrolled back; a pan into future overscroll has a positive
+offset and needs a reset button instead.
+
 The example app's **Time scroll** screen includes a **Reset zoom** button and a live visible-window
 readout so the behavior can be exercised directly.
 

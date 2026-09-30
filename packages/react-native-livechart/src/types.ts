@@ -2151,6 +2151,8 @@ export interface LiveChartHandle {
    * ```
    */
   resetZoom(): void;
+  /** Smoothly return to the live edge while keeping the current zoom. */
+  scrollToLatest(): void;
 }
 
 /**
@@ -2575,6 +2577,8 @@ export interface LiveChartCoreProps {
 
 /** Props for the single-series `LiveChart` component. */
 export interface LiveChartProps extends LiveChartCoreProps {
+  /** UI-thread pointer position for a free-price scrub overlay. */
+  scrubPointer?: SharedValue<{ x: number; y: number; active: boolean }>;
   /**
    * `nowOverride` as a shared value, so a caller can slide the window from the
    * UI thread without a render. Takes precedence over `nowOverride` when both

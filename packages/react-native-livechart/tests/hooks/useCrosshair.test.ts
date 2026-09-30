@@ -1105,9 +1105,9 @@ describe("useCrosshair (hook)", () => {
     );
     const config = getGestureConfig(result.current.gesture);
     expect(config.activateAfterLongPress).toEqual([250]);
-    expect(config.minDistance).toBeUndefined();
-    expect(config.activeOffsetX).toEqual([[-20, 20]]);
-    expect(config.failOffsetY).toEqual([[-10, 10]]);
+    expect(config.minDistance).toEqual([0]);
+    expect(config.activeOffsetX).toBeUndefined();
+    expect(config.failOffsetY).toBeUndefined();
   });
 
   it("does not build a tap gesture or lock state without scrubAction", async () => {

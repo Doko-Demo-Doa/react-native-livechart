@@ -200,6 +200,8 @@ Attach a `ref` typed as [`LiveChartHandle`](/api-reference/types#imperative-hand
 `ref.current?.resetZoom()` to return the shared window to `timeWindow` and the live edge. This is
 the same imperative reset exposed by `LiveChart`. See
 [Time-scroll → Reset zoom from a button](/guides/time-scroll#reset-zoom-from-a-button).
+Call `ref.current?.scrollToLatest()` to glide to the live edge without changing
+the current zoom. See [Time-scroll](/guides/time-scroll#scroll-to-latest).
 
 <ParamField body="onVisibleRangeChange" type="(range: VisibleRange) => void">
   Called as the visible window changes (~1 Hz) with `{ startSec, endSec,

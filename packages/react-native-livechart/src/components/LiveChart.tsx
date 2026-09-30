@@ -106,7 +106,7 @@ import { useMarkers } from "../hooks/useMarkers";
 import { useModeBlend } from "../hooks/useModeBlend";
 import { resolveMomentumProp, useMomentum } from "../hooks/useMomentum";
 import { AXIS_GRAB_MIN_PX, usePanScroll } from "../hooks/usePanScroll";
-import { resetPinchZoom, usePinchZoom } from "../hooks/usePinchZoom";
+import { resetPinchZoom, scrollToLatest, usePinchZoom } from "../hooks/usePinchZoom";
 import { useReferenceDrag } from "../hooks/useReferenceDrag";
 import { useReferenceLinePress } from "../hooks/useReferenceLinePress";
 import { useSingleChartReverseMorphInputs } from "../hooks/useReverseMorphEngineInputs";
@@ -1491,6 +1491,7 @@ function useLiveChartController({
   palette: paletteOverride,
   metrics,
   scrub = true,
+  scrubPointer,
   scrubAction,
   selectionDot,
   tradeStream,
@@ -2058,6 +2059,7 @@ function useLiveChartController({
     scrubCfg?.snapToCandles ?? false,
     // Pull the crosshair onto nearby marker timestamps.
     scrubCfg?.snapToMarkers ? markersSV : undefined,
+    scrubPointer,
   );
 
   // Capture only the shared value in the worklets below. Referencing
@@ -4096,13 +4098,14 @@ function ChartView({
 export const LiveChart = forwardRef<LiveChartHandle, LiveChartProps>(
   function LiveChart(props, ref) {
     const model = useLiveChartController(props);
-    const { viewEnd, viewWindow } = model.engine;
+    const { viewEnd, viewWindow, liveEdge } = model.engine;
     useImperativeHandle(
       ref,
       () => ({
         resetZoom: () => scheduleOnUI(resetPinchZoom, { viewEnd, viewWindow }),
+        scrollToLatest: () => scheduleOnUI(scrollToLatest, { viewEnd, liveEdge }),
       }),
-      [viewEnd, viewWindow],
+      [viewEnd, viewWindow, liveEdge],
     );
     if (model.yAxisCfg) {
       return <ChartWithYAxis model={model} />;

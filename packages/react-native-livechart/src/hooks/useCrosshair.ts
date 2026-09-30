@@ -207,6 +207,8 @@ export function useCrosshair(
   snapToCandles = false,
   /** Marker timestamps that magnetize the plain-scrub X when nearby. */
   snapMarkers?: SharedValue<Marker[]>,
+  /** Optional raw pointer position for a custom free-price scrub overlay. */
+  scrubPointer?: SharedValue<{ x: number; y: number; active: boolean }>,
 ): CrosshairState {
   const scrubX = useSharedValue(-1);
   const scrubActive = useSharedValue(false);
@@ -791,6 +793,13 @@ export function useCrosshair(
           scrubActive,
           gestureStarted,
         );
+        if (scrubActive.get()) {
+          scrubPointer?.set({
+            x: scrubX.get(),
+            y: clampPlotY(e.y, padding.top, engine.canvasHeight.get(), padding.bottom),
+            active: true,
+          });
+        }
         if (hasOnGestureStart) scheduleOnRN(handleGestureStart);
       },
     )
@@ -830,6 +839,13 @@ export function useCrosshair(
           scrubX,
           scrubActive,
         );
+        if (scrubActive.get()) {
+          scrubPointer?.set({
+            x: scrubX.get(),
+            y: clampPlotY(e.y, padding.top, engine.canvasHeight.get(), padding.bottom),
+            active: true,
+          });
+        }
       },
     )
     .onFinalize(
@@ -841,6 +857,7 @@ export function useCrosshair(
         // stray scrub can never linger behind a placed reticle.
         if (scrubActive.get()) {
           scrubActive.set(false);
+          scrubPointer?.set({ x: scrubX.get(), y: -1, active: false });
           if (hasOnScrub) scheduleOnRN(handleScrubEnd);
         }
         if (gestureStarted.get()) {
@@ -852,17 +869,17 @@ export function useCrosshair(
 
   // Passing zero-valued activation modifiers lets RNGH's iOS pan recognizer
   // activate before the axis constraints classify the drag. Only configure a
-  // hold when one is requested, and reserve minDistance(0) for scrub-action's
-  // deliberate press-hold interaction.
+  // hold when one is requested. A held plain scrub must activate while the
+  // finger is still, before its first drag.
   if (longPressMs > 0) {
     gesture = gesture.activateAfterLongPress(longPressMs);
   }
 
-  if (hasScrubAction) {
+  if (hasScrubAction || longPressMs > 0) {
     gesture = gesture.minDistance(0);
   } else {
-    // Lock mode needs free vertical drag (Y = price), so the failOffsetY clamp —
-    // which would kill a vertical adjust — is applied only outside scrub-action.
+    // Immediate plain scrub uses a horizontal activation threshold so vertical
+    // drags can pass to a parent scroll view.
     gesture = gesture
       .activeOffsetX([-SCRUB_ACTIVATE_X_PX, SCRUB_ACTIVATE_X_PX])
       .failOffsetY([-SCRUB_FAIL_Y_PX, SCRUB_FAIL_Y_PX]);

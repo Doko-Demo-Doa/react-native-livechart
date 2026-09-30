@@ -68,7 +68,7 @@ import { useMarkers } from "../hooks/useMarkers";
 import { useMultiSeriesDegen } from "../hooks/useMultiSeriesDegen";
 import { useMultiSeriesLinePaths } from "../hooks/useMultiSeriesLinePaths";
 import { usePanScroll } from "../hooks/usePanScroll";
-import { resetPinchZoom, usePinchZoom } from "../hooks/usePinchZoom";
+import { resetPinchZoom, scrollToLatest, usePinchZoom } from "../hooks/usePinchZoom";
 import { useMultiSeriesReverseMorphInputs } from "../hooks/useReverseMorphEngineInputs";
 import {
   SERIES_INDICATOR_FADE_MS,
@@ -1430,13 +1430,14 @@ export const LiveChartSeries = forwardRef<
   LiveChartSeriesProps
 >(function LiveChartSeries(props, ref) {
   const model = useLiveChartSeriesController(props);
-  const { viewEnd, viewWindow } = model.engine;
+  const { viewEnd, viewWindow, liveEdge } = model.engine;
   useImperativeHandle(
     ref,
     () => ({
       resetZoom: () => scheduleOnUI(resetPinchZoom, { viewEnd, viewWindow }),
+      scrollToLatest: () => scheduleOnUI(scrollToLatest, { viewEnd, liveEdge }),
     }),
-    [viewEnd, viewWindow],
+    [viewEnd, viewWindow, liveEdge],
   );
   const {
     rootGesture,

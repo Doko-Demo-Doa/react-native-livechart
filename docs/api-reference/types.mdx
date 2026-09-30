@@ -328,6 +328,11 @@ interface ScrubActionPoint {
 }
 ```
 
+For a custom free-price overlay, `LiveChartProps.scrubPointer` accepts a
+`SharedValue<{ x: number; y: number; active: boolean }>` with the snapped
+crosshair X and the finger Y. See
+[Free-price pointer overlays](/guides/scrubbing#free-price-pointer-overlays).
+
 ## Config objects
 
 These are the option shapes accepted by the matching props.
@@ -686,10 +691,13 @@ interface LiveChartHandle {
   // Reset built-in pinch zoom to timeWindow and clear its focal offset so the
   // chart follows the live edge again. Safe when already reset.
   resetZoom(): void;
+  // Glide to the live edge while keeping the current zoom.
+  scrollToLatest(): void;
 }
 ```
 
 Use `useRef<LiveChartHandle>(null)` and pass the ref to either chart. A paused chart remains paused.
+`scrollToLatest()` is safe when already following live data.
 See [Time-scroll → Reset zoom from a button](/guides/time-scroll#reset-zoom-from-a-button).
 
 ## AxisLabelConfig

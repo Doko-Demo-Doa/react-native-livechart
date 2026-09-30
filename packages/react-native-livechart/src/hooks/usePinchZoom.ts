@@ -1,10 +1,13 @@
 import { Gesture } from "react-native-gesture-handler";
 import {
   cancelAnimation,
+  Easing,
   useSharedValue,
+  withTiming,
   type SharedValue,
 } from "react-native-reanimated";
 
+import { RETURN_TO_LIVE_MS } from "../constants";
 import type { ChartPadding } from "../draw/line";
 import { FOLLOW_SNAP, panLowerBound, panUpperBound } from "./usePanScroll";
 
@@ -45,6 +48,26 @@ export function resetPinchZoom({
   cancelAnimation(viewEnd);
   viewWindow.set(null);
   viewEnd.set(null);
+}
+
+/** Ease back to the live edge while preserving the current zoom. */
+export function scrollToLatest({
+  viewEnd,
+  liveEdge,
+}: Pick<PinchZoomEngineRefs, "viewEnd" | "liveEdge">): void {
+  "worklet";
+  if (viewEnd.get() == null) return;
+  cancelAnimation(viewEnd);
+  viewEnd.set(
+    withTiming(
+      liveEdge.get(),
+      { duration: RETURN_TO_LIVE_MS, easing: Easing.out(Easing.cubic) },
+      (finished) => {
+        "worklet";
+        if (finished) viewEnd.set(null);
+      },
+    ),
+  );
 }
 
 export interface UsePinchZoomOptions {

@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Visible-range callbacks now report changes between parked and live-following
+  states even when the rounded window edges have not moved.
 - TGFX now preserves UI-thread updates to gradient stops and combines nested
   animated opacities before compilation, preventing stale segment gradients and
   mode-transition fades.
@@ -17,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `LiveChartHandle.scrollToLatest()` glides to the live edge while preserving
+  zoom on both chart components. `LiveChart.scrubPointer` exposes the active
+  plain-scrub X and finger Y on the UI thread for custom price overlays.
 - **External chart-chrome and Y-range control for `LiveChart`.** New optional
   props: `nowOverrideValue` (a `SharedValue<number>` form of `nowOverride`,
   driven from the UI thread), `omitTipBeyondData` (end the line at its last

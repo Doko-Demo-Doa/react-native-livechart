@@ -419,6 +419,16 @@ const [scrubbing, setScrubbing] = useState(false);
 fires once the press-and-hold threshold is met. `onGestureEnd` fires only if a scrub actually
 started; a quick tap that never activates emits neither callback.
 
+### Free-price pointer overlays
+
+Pass `scrubPointer` to `LiveChart` when a custom overlay needs the finger's
+price level instead of the line value. It is a `SharedValue` of `{ x, y,
+active }`: `x` follows the chart's snapped crosshair, `y` follows the finger
+within the plot, and `active` becomes false when the scrub ends. Read it in a
+`renderOverlay` element to draw a horizontal price guide or an axis badge.
+With `timeScroll={{ gesture: "holdToScrub" }}`, the pointer activates after a
+stationary hold and follows subsequent drags without panning the timeline.
+
 They pair well with side effects you want to bracket around an interaction — fire a haptic on start,
 or pause a live feed while the user inspects history and resume it on end.
 
